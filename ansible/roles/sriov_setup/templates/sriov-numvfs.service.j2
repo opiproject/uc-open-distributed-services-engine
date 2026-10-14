@@ -1,0 +1,21 @@
+[Unit]
+Description=Set sriov_numvfs for {{ sriov_setup_pf.pf_name }} (managed by ansible/roles/sriov_setup -- do not edit by hand)
+After=sys-subsystem-net-devices-{{ sriov_setup_pf.pf_name }}.device network-pre.target
+Wants=sys-subsystem-net-devices-{{ sriov_setup_pf.pf_name }}.device
+DefaultDependencies=no
+Before=network.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+# Mirrors the same disruptive-change safety logic used by
+# tasks/set_numvfs.yml: only resets to 0 first if the current value is
+# non-zero and different from the target, then applies the target value.
+ExecStart=/bin/sh -c 'current=$(cat /sys/class/net/{{ sriov_setup_pf.pf_name }}/device/sriov_numvfs 2>/dev/null || echo 0); \
+  if [ "$current" != "{{ sriov_setup_pf.num_vfs }}" ]; then \
+    if [ "$current" != "0" ]; then echo 0 > /sys/class/net/{{ sriov_setup_pf.pf_name }}/device/sriov_numvfs; fi; \
+    echo {{ sriov_setup_pf.num_vfs }} > /sys/class/net/{{ sriov_setup_pf.pf_name }}/device/sriov_numvfs; \
+  fi'
+
+[Install]
+WantedBy=multi-user.target

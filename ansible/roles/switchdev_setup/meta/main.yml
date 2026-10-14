@@ -1,0 +1,39 @@
+---
+galaxy_info:
+  role_name: switchdev_setup
+  namespace: odse
+  author: Open Distributed Services Engine contributors
+  description: >-
+    Prepares switchdev eswitch mode (where supported) on one or more PFs
+    using devlink, in a vendor-neutral way with optional vendor-specific
+    hooks.
+  license: Apache-2.0
+  min_ansible_version: "2.14"
+
+  platforms:
+    - name: EL
+      versions:
+        - "8"
+        - "9"
+    - name: Fedora
+      versions:
+        - all
+    - name: Ubuntu
+      versions:
+        - all
+    - name: Debian
+      versions:
+        - all
+    - name: openSUSE
+      versions:
+        - all
+
+  galaxy_tags:
+    - networking
+    - switchdev
+    - devlink
+    - sriov
+    - dpu
+    - offload
+
+dependencies: []

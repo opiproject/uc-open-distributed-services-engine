@@ -1,0 +1,17 @@
+{
+  "p4_mode": "mock",
+  "p4_endpoint": "infrap4d.example.test:9339",
+  "p4_device_id": "1",
+  "mock_pipeline_config": {
+    "p4info_summary": "l2_fwd.p4info.txt (mock)",
+    "cookie": 42
+  },
+  "mock_table_entries": [
+    {
+      "id": "vm1-vm2-fwd",
+      "match": {"vf_index": 0},
+      "action": "forward",
+      "mock_counter_packets": 128
+    }
+  ]
+}

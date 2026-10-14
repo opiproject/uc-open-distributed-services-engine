@@ -1,0 +1,99 @@
+---
+# tasks/main.yml for switchdev_setup
+#
+# Prepares switchdev eswitch mode (where supported) for each PF listed in
+# switchdev_devices. See README.md for the full variable schema and
+# limitations before running this role.
+
+- name: Ensure Ansible facts are available
+  ansible.builtin.setup:
+  when: ansible_facts.os_family is not defined
+
+- name: Validate switchdev_devices is a list
+  ansible.builtin.assert:
+    that:
+      - switchdev_devices is defined
+      - switchdev_devices is sequence
+    fail_msg: >-
+      switchdev_devices must be a list of PF names, PCI addresses, or
+      objects -- see README.md for the expected schema.
+    success_msg: "switchdev_devices is a valid list."
+
+- name: Validate switchdev_mode value
+  ansible.builtin.assert:
+    that:
+      - switchdev_mode in ['switchdev', 'legacy']
+    fail_msg: "switchdev_mode must be 'switchdev' or 'legacy', got '{{ switchdev_mode }}'."
+    success_msg: "switchdev_mode is valid."
+
+- name: Nothing to do -- switchdev_devices is empty
+  ansible.builtin.debug:
+    msg: "switchdev_devices is empty; switchdev_setup has nothing to configure."
+  when: switchdev_devices | length == 0
+
+- name: Check whether the devlink command is available
+  ansible.builtin.command:
+    cmd: devlink -V
+  register: switchdev_setup_devlink_binary_check
+  changed_when: false
+  failed_when: false
+  when: switchdev_devices | length > 0
+
+- name: Fail early if devlink is not installed
+  ansible.builtin.fail:
+    msg: >-
+      The 'devlink' command is not available on this host. It is provided
+      by iproute2 -- ensure ansible/roles/host_base (or equivalent) has
+      installed networking tools before running switchdev_setup.
+  when:
+    - switchdev_devices | length > 0
+    - switchdev_setup_devlink_binary_check.rc != 0
+
+- name: Ensure the Ansible local facts directory exists
+  ansible.builtin.file:
+    path: "{{ switchdev_setup_facts_dir }}"
+    state: directory
+    mode: "0755"
+  when:
+    - switchdev_devices | length > 0
+    - switchdev_setup_devlink_binary_check.rc == 0
+
+- name: Initialize aggregate result list
+  ansible.builtin.set_fact:
+    switchdev_setup_all_results: []
+  when:
+    - switchdev_devices | length > 0
+    - switchdev_setup_devlink_binary_check.rc == 0
+
+- name: Configure switchdev mode for each requested device
+  ansible.builtin.include_tasks: configure_device.yml
+  loop: "{{ switchdev_devices }}"
+  loop_control:
+    loop_var: switchdev_setup_device
+    label: >-
+      {{ switchdev_setup_device if switchdev_setup_device is string
+         else (switchdev_setup_device.pf_name | default(switchdev_setup_device.pci_address) | default('unknown')) }}
+  when:
+    - switchdev_devices | length > 0
+    - switchdev_setup_devlink_binary_check.rc == 0
+
+- name: Report per-device switchdev_setup results
+  ansible.builtin.debug:
+    msg: "{{ switchdev_setup_all_results }}"
+  when: switchdev_setup_all_results | default([]) | length > 0
+
+- name: Write aggregated results to an Ansible local facts file
+  ansible.builtin.copy:
+    dest: "{{ switchdev_setup_facts_dir }}/{{ switchdev_setup_facts_file_name }}"
+    content: "{{ switchdev_setup_all_results | to_nice_json }}"
+    mode: "0644"
+  register: switchdev_setup_facts_file_result
+  when: switchdev_setup_all_results | default([]) | length > 0
+
+- name: Refresh ansible_local facts so downstream tasks in this play see the new file
+  ansible.builtin.setup:
+    filter: ansible_local
+  when:
+    - switchdev_setup_refresh_local_facts | bool
+    - switchdev_setup_facts_file_result is defined
+    - switchdev_setup_facts_file_result is changed

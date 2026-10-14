@@ -1,0 +1,115 @@
+# ODSE Intel IPU network-function-offload EXAMPLE (not VM-to-VM).
+# Copy to config/lab-intel-network-function-offload.yaml (gitignored)
+# and replace placeholders from discovery. Do not treat names, IPs, or
+# PCI addresses as real hardware.
+#
+# First-run path: `python tools/labctl.py intel-nf <stage> --config ...`
+# Do not mix this with NVIDIA OVS representor forwarding.
+
+schema: odse-lab-vm2vm/v1alpha1
+
+host:
+  name: <HOST_NAME>
+  management_interface: <MGMT_IFACE>
+  ssh_user: <HOST_SSH_USER>
+  preserve_interfaces: []
+  os_family: RedHat
+
+vendor:
+  type: intel-ipu
+  backend_module: null
+  profile: intel-ipu-opi-dpu-operator
+
+intel:
+  mode: opi-dpu-operator
+  vm_to_vm_forwarding_default: discovery-required
+  require_opi: true
+  require_dpu_operator: false
+  require_redfish: false
+  allow_ovs_assumption: false
+
+opi:
+  endpoint: null
+  auth_mode: mock
+  verify_tls: true
+
+dpu_operator:
+  kubeconfig: null
+  namespace: null
+  require_installed: false
+
+ipu:
+  management_ip: 192.0.2.20
+  redfish_endpoint: null
+  firmware_required: null
+
+network_function:
+  name: odse-intel-nf-example
+  type: proxy
+  image: null
+  placement: ipu
+  expose_to_host_workload: true
+
+dpu:
+  pf_name: <IPU_PF_NETDEV>
+  pf_pci: <IPU_PCI_ADDRESS>
+  uplink_name: null
+  uplink_pci: null
+  management_ip: 192.0.2.20
+  num_vfs: 2
+  enable_switchdev: false
+  enable_ovs_hw_offload: false
+  preferred_datapath: discovery
+  opi_endpoint: null
+  redfish_endpoint: null
+
+ovs:
+  bridge: br-int
+  datapath_type: null
+  fail_mode: null
+  ports: []
+
+vms:
+  - name: odse-intel-nf-host-workload
+    image: <VM_IMAGE>
+    memory_mb: 2048
+    vcpus: 2
+    vf_index: 0
+    vf_pci: null
+    mac: null
+    ip_cidr: 198.51.100.41/24
+    gateway: null
+    ssh_user: <VM_SSH_USER>
+    management_ip: null
+    ssh_key_path: null    # optional; set if ssh's default identity isn't the key authorized into this guest
+  - name: odse-intel-nf-peer
+    image: <VM_IMAGE>
+    memory_mb: 2048
+    vcpus: 2
+    vf_index: 1
+    vf_pci: null
+    mac: null
+    ip_cidr: 198.51.100.42/24
+    gateway: null
+    ssh_user: <VM_SSH_USER>
+    management_ip: null
+    ssh_key_path: null    # optional; set if ssh's default identity isn't the key authorized into this guest
+
+traffic:
+  type: "placeholder"
+  duration_seconds: 30
+  iperf_parallel_streams: 1
+  packet_size: null
+
+validation:
+  collect_ovs_flows: false
+  collect_tc_filters: false
+  collect_ethtool_stats: true
+  collect_cpu_stats: true
+  collect_vendor_telemetry: true
+
+safety:
+  dry_run_default: true
+  require_apply: true
+  forbid_management_interface_changes: true
+  cleanup_on_failure: false

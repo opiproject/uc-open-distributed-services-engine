@@ -1,0 +1,36 @@
+---
+# tasks/persist_config.yml
+#
+# Generates and enables a systemd oneshot unit that reapplies sriov_numvfs
+# for this PF on every boot. This is the only persistence mechanism
+# currently implemented -- see defaults/main.yml sriov_setup_persist_method
+# and README.md "Persistence" for known caveats (e.g. interface names that
+# require systemd-escape are not handled specially).
+
+- name: Render persistent systemd unit for {{ sriov_setup_pf.pf_name }}
+  ansible.builtin.template:
+    src: sriov-numvfs.service.j2
+    dest: "{{ sriov_setup_systemd_unit_dir }}/sriov-numvfs-{{ sriov_setup_pf.pf_name }}.service"
+    mode: "0644"
+  register: sriov_setup_persist_unit_result
+
+- name: Reload systemd daemon after unit changes
+  ansible.builtin.systemd:
+    daemon_reload: true
+  when: sriov_setup_persist_unit_result is changed
+
+- name: Enable persistent sriov_numvfs unit for {{ sriov_setup_pf.pf_name }}
+  ansible.builtin.systemd:
+    name: "sriov-numvfs-{{ sriov_setup_pf.pf_name }}.service"
+    enabled: true
+  register: sriov_setup_persist_enable_result
+  failed_when: false
+
+- name: Warn if the persistent unit could not be enabled
+  ansible.builtin.debug:
+    msg: >-
+      Could not enable sriov-numvfs-{{ sriov_setup_pf.pf_name }}.service:
+      {{ sriov_setup_persist_enable_result.msg | default('unknown error') }}.
+      Persistence for this PF may not survive a reboot -- verify manually
+      with 'systemctl status sriov-numvfs-{{ sriov_setup_pf.pf_name }}.service'.
+  when: sriov_setup_persist_enable_result is failed

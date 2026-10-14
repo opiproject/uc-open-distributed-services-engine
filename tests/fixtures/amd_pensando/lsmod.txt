@@ -1,0 +1,2 @@
+ionic                 123456  0
+ionic_rdma             65536  0

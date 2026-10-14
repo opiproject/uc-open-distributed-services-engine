@@ -1,0 +1,52 @@
+........................................F............................... [ 20%]
+........................................................................ [ 40%]
+........................................................................ [ 61%]
+.....F............................................................ [ 79%]
+..................................F....................................  [100%]
+=================================== FAILURES ===================================
+__ BuildForwardingIntentTests.test_intent_carries_bridge_and_datapath_details __
+
+self = <test_forwarding_intent.BuildForwardingIntentTests testMethod=test_intent_carries_bridge_and_datapath_details>
+
+    def test_intent_carries_bridge_and_datapath_details(self):
+        intent = build_forwarding_intent(self.config)
+        self.assertEqual(intent.name, "odse-vm2vm-nvidia")
+        self.assertEqual(intent.type, "l2-vm-to-vm")
+        self.assertEqual(intent.mode, "bridge")
+        self.assertEqual(intent.bridge, "br-int")
+>       self.assertEqual(intent.details.get("datapath_type"), "system")
+E       AssertionError: 'doca' != 'system'
+E       - doca
+E       + system
+
+tests/unit/test_forwarding_intent.py:49: AssertionError
+_____ VfAssignmentPlanTests.test_iommu_from_samples_does_not_invent_ready ______
+
+self = <test_vf_assignment_plan.VfAssignmentPlanTests testMethod=test_iommu_from_samples_does_not_invent_ready>
+
+    def test_iommu_from_samples_does_not_invent_ready(self):
+        unknown = iommu_vfio_readiness(sys_root="/does/not/exist")
+>       self.assertIsNone(unknown["ready"])
+E       AssertionError: False is not None
+
+tests/unit/test_vf_assignment_plan.py:55: AssertionError
+_ NvidiaConfigureForwardingTests.test_two_endpoint_bridge_forwarding_is_planned _
+
+self = <tests.vendor.nvidia.test_configure_forwarding.NvidiaConfigureForwardingTests testMethod=test_two_endpoint_bridge_forwarding_is_planned>
+
+    def test_two_endpoint_bridge_forwarding_is_planned(self):
+        result = self.backend.configure_forwarding(_intent())
+        self.assertTrue(result.success)
+        self.assertEqual(result.vendor, "nvidia")
+>       self.assertEqual(result.forwarding_entity, "NVIDIA BlueField/ConnectX E-Switch")
+E       AssertionError: 'NVIDIA BlueField/ConnectX E-Switch (host path)' != 'NVIDIA BlueField/ConnectX E-Switch'
+E       - NVIDIA BlueField/ConnectX E-Switch (host path)
+E       ?                                   ------------
+E       + NVIDIA BlueField/ConnectX E-Switch
+
+tests/vendor/nvidia/test_configure_forwarding.py:55: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/test_forwarding_intent.py::BuildForwardingIntentTests::test_intent_carries_bridge_and_datapath_details
+FAILED tests/unit/test_vf_assignment_plan.py::VfAssignmentPlanTests::test_iommu_from_samples_does_not_invent_ready
+FAILED tests/vendor/nvidia/test_configure_forwarding.py::NvidiaConfigureForwardingTests::test_two_endpoint_bridge_forwarding_is_planned
+3 failed, 350 passed, 6 subtests passed in 67.78s (0:01:07)

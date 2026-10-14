@@ -1,0 +1,45 @@
+---
+# tasks/install_package_group.yml
+#
+# Shared, reusable logic for installing a distro-aware package group.
+# Included with two task-level vars set by the caller (see tasks/main.yml):
+#   host_base_package_group_name: a human-readable label used in messages
+#   host_base_package_group_map:  a dict keyed by ansible_facts.os_family,
+#                                  with a 'default' fallback key
+#
+# This is what lets host_base stay distro-agnostic: every package group
+# (baseline, network tools, KVM/libvirt, OVS, OVN) resolves through this
+# same logic instead of duplicating per-distro branching five times.
+
+- name: Resolve "{{ host_base_package_group_name }}" package list for this OS family
+  ansible.builtin.set_fact:
+    host_base_resolved_package_group: >-
+      {{ host_base_package_group_map.get(ansible_facts.os_family,
+         host_base_package_group_map.get('default', [])) }}
+
+- name: Warn about missing distro-specific "{{ host_base_package_group_name }}" package list
+  ansible.builtin.debug:
+    msg: >-
+      No "{{ host_base_package_group_name }}" package list is defined for OS
+      family '{{ ansible_facts.os_family }}' in this role's defaults. Falling
+      back to the 'default' list ({{ host_base_resolved_package_group }}).
+      This is a known placeholder gap -- verify package names for this
+      distro and add a distro-specific entry (see README.md "Distro
+      coverage") before relying on this role for it.
+  when: ansible_facts.os_family not in host_base_package_group_map
+
+- name: Install "{{ host_base_package_group_name }}" packages
+  ansible.builtin.package:
+    name: "{{ host_base_resolved_package_group }}"
+    state: "{{ host_base_package_state }}"
+  when: host_base_resolved_package_group | length > 0
+  register: host_base_package_install_result
+
+- name: No "{{ host_base_package_group_name }}" packages resolved for this OS family
+  ansible.builtin.debug:
+    msg: >-
+      The resolved "{{ host_base_package_group_name }}" package list is empty
+      for OS family '{{ ansible_facts.os_family }}'. Nothing was installed
+      for this group -- this may be an intentional 'not applicable' case, or
+      an unverified placeholder; check defaults/main.yml.
+  when: host_base_resolved_package_group | length == 0

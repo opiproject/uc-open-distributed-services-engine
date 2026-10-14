@@ -1,0 +1,213 @@
+---
+# defaults/main.yml for host_base
+#
+# All variables here are safe to override at the play, inventory, or
+# group/host_vars level. Distro-specific package/service names are kept in
+# per-OS-family dictionaries so this role does not assume a single Linux
+# distribution. Where a distribution is not yet covered, the 'default' key
+# is used as a conservative, likely-incomplete placeholder -- see README.md
+# "Distro coverage" for current status, and treat any OS family not
+# explicitly listed as unverified.
+
+# ---------------------------------------------------------------------------
+# Feature toggles
+# ---------------------------------------------------------------------------
+
+# Check for CPU virtualization extensions (vmx/svm) and /dev/kvm presence.
+host_base_check_virtualization: true
+
+# If true, fail the play when virtualization support is not detected.
+# Conservative default: only warn, since some hosts in a mixed inventory
+# may legitimately not be KVM targets yet.
+host_base_fail_on_missing_virtualization: false
+
+# Check the running kernel command line for IOMMU-related parameters.
+host_base_check_iommu: true
+
+# If true, fail the play when expected IOMMU parameters are missing.
+# Conservative default: only warn.
+host_base_fail_on_missing_iommu: false
+
+host_base_install_baseline_packages: true
+host_base_install_network_tools: true
+host_base_install_kvm: true
+host_base_install_ovs: true
+host_base_install_ovn: true
+
+# Hugepages are opt-in: this role does not reserve hugepages unless
+# explicitly requested, since it changes host memory allocation behavior.
+host_base_configure_hugepages: false
+
+host_base_start_libvirtd: true
+host_base_start_openvswitch: true
+
+# ---------------------------------------------------------------------------
+# Package installation behavior
+# ---------------------------------------------------------------------------
+
+# Passed directly to the `package` module's `state` parameter for every
+# package group below. Using the generic `package` module (rather than
+# `apt`/`yum`/`dnf`/`zypper` directly) is what lets this role stay
+# distro-agnostic.
+host_base_package_state: present
+
+# ---------------------------------------------------------------------------
+# IOMMU expectations by detected CPU vendor
+#
+# x86 platforms enable IOMMU remapping via a kernel command-line parameter
+# that differs by CPU vendor. Non-x86 platforms (e.g. aarch64) typically
+# rely on firmware/device-tree-configured SMMU instead of a command-line
+# flag; this role does not yet know how to verify that, and reports a
+# placeholder message rather than guessing -- see tasks/checks_iommu.yml.
+# ---------------------------------------------------------------------------
+
+host_base_iommu_params_by_vendor:
+  intel:
+    - "intel_iommu=on"
+    - "iommu=pt"
+  amd:
+    - "amd_iommu=on"
+    - "iommu=pt"
+  # 'unknown' is deliberately absent: an unrecognized CPU vendor falls back
+  # to the placeholder path in tasks/checks_iommu.yml rather than a guess.
+
+# ---------------------------------------------------------------------------
+# Baseline packages (general-purpose host tooling, not offload-specific)
+# ---------------------------------------------------------------------------
+
+host_base_baseline_packages_by_family:
+  RedHat:
+    - curl
+    - vim-enhanced
+    - tar
+    - chrony
+  Debian:
+    - curl
+    - vim
+    - tar
+    - chrony
+  # Placeholder: not yet verified against a real SUSE host. Package names
+  # are believed correct but untested by this project -- see README.md.
+  Suse:
+    - curl
+    - vim
+    - tar
+    - chrony
+  default: []
+
+# ---------------------------------------------------------------------------
+# Network tooling packages: iproute2, ethtool, pciutils, jq, python3
+# ---------------------------------------------------------------------------
+
+host_base_network_tools_packages_by_family:
+  RedHat:
+    - iproute
+    - ethtool
+    - pciutils
+    - jq
+    - python3
+  Debian:
+    - iproute2
+    - ethtool
+    - pciutils
+    - jq
+    - python3
+  # Placeholder: package names are believed correct for openSUSE/SLES but
+  # have not been verified by this project on real hardware.
+  Suse:
+    - iproute2
+    - ethtool
+    - pciutils
+    - jq
+    - python3
+  default:
+    - ethtool
+    - pciutils
+    - jq
+    - python3
+
+# ---------------------------------------------------------------------------
+# QEMU/KVM and libvirt packages
+# ---------------------------------------------------------------------------
+
+host_base_kvm_packages_by_family:
+  RedHat:
+    - qemu-kvm
+    - libvirt
+    - libvirt-client
+    - virt-install
+  Debian:
+    - qemu-kvm
+    - libvirt-daemon-system
+    - libvirt-clients
+    - virtinst
+  # Placeholder: SUSE ships qemu-kvm/libvirt under broadly similar names,
+  # but this has not been verified against a real host -- confirm before
+  # relying on this in production.
+  Suse:
+    - qemu-kvm
+    - libvirt
+    - libvirt-client
+  default: []
+
+host_base_libvirtd_service_name_by_family:
+  RedHat: libvirtd
+  Debian: libvirtd
+  Suse: libvirtd
+  default: libvirtd
+
+# ---------------------------------------------------------------------------
+# Open vSwitch packages
+# ---------------------------------------------------------------------------
+
+host_base_ovs_packages_by_family:
+  RedHat:
+    - openvswitch
+  Debian:
+    - openvswitch-switch
+    - openvswitch-common
+  # Placeholder: openSUSE/SLES package availability for Open vSwitch varies
+  # by version and repository; not yet confirmed by this project.
+  Suse: []
+  default: []
+
+host_base_openvswitch_service_name_by_family:
+  RedHat: openvswitch
+  Debian: openvswitch-switch
+  Suse: openvswitch
+  default: openvswitch
+
+# ---------------------------------------------------------------------------
+# OVN packages
+#
+# Placeholder for all families: OVN package naming and availability varies
+# significantly (separate ovn/ovn-central/ovn-host packages, vendored with
+# OVS, or only available from a third-party/NFV-SIG-style repository
+# depending on distro and version). Do not treat any of these lists as
+# verified -- confirm against your actual target distro/release before use.
+# ---------------------------------------------------------------------------
+
+host_base_ovn_packages_by_family:
+  RedHat:
+    - ovn
+    - ovn-central
+    - ovn-host
+  Debian:
+    - ovn-common
+    - ovn-central
+    - ovn-host
+  Suse: []
+  default: []
+
+# ---------------------------------------------------------------------------
+# Hugepages (optional; disabled by default -- see host_base_configure_hugepages)
+#
+# Only 2048 KB (2MB) hugepages are configured by this role, via a
+# persistent sysctl drop-in file plus an immediate `sysctl -p` apply. 1GB
+# (or other) hugepage sizes require kernel command-line parameters
+# (default_hugepagesz/hugepagesz/hugepages) and a reboot, which this role
+# deliberately does not attempt -- see tasks/hugepages.yml and README.md.
+# ---------------------------------------------------------------------------
+
+host_base_hugepage_size_kb: 2048
+host_base_hugepage_count: 0

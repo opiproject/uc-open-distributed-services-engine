@@ -1,0 +1,8 @@
+---
+# handlers/main.yml for ovs_setup
+#
+# No handlers are currently defined. The optional OVS service restart
+# after a hw-offload change is applied directly in
+# tasks/set_hw_offload.yml (gated by ovs_setup_restart_on_hw_offload_change)
+# rather than deferred to a handler, so it happens immediately before
+# bridges/ports are configured in the same run.

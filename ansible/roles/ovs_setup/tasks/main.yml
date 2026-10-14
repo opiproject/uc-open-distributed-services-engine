@@ -1,0 +1,120 @@
+---
+# tasks/main.yml for ovs_setup
+#
+# Configures Open vSwitch for offload experiments: ensures the service is
+# running, reconciles other_config:hw-offload, creates bridges and ports,
+# and dumps ovs-vsctl show / ovs-appctl dpctl/show for inspection. See
+# README.md for the full variable schema and examples.
+
+- name: Ensure Ansible facts are available
+  ansible.builtin.setup:
+  when: ansible_facts.os_family is not defined
+
+- name: Validate ovs_bridges is a list
+  ansible.builtin.assert:
+    that:
+      - ovs_bridges is defined
+      - ovs_bridges is sequence
+    fail_msg: "ovs_bridges must be a list -- see README.md for the expected schema."
+    success_msg: "ovs_bridges is a valid list."
+
+- name: Validate ovs_ports is a list
+  ansible.builtin.assert:
+    that:
+      - ovs_ports is defined
+      - ovs_ports is sequence
+    fail_msg: "ovs_ports must be a list -- see README.md for the expected schema."
+    success_msg: "ovs_ports is a valid list."
+
+- name: Ensure OVS service is running
+  ansible.builtin.include_tasks: ensure_service.yml
+
+- name: Set other_config:hw-offload
+  ansible.builtin.include_tasks: set_hw_offload.yml
+
+- name: Initialize aggregate bridge result list
+  ansible.builtin.set_fact:
+    ovs_setup_bridge_results: []
+
+- name: Create bridges
+  ansible.builtin.include_tasks: create_bridge.yml
+  loop: "{{ ovs_bridges }}"
+  loop_control:
+    loop_var: ovs_setup_bridge_item
+    label: >-
+      {{ ovs_setup_bridge_item if ovs_setup_bridge_item is string
+         else (ovs_setup_bridge_item.name | default('unknown')) }}
+  when: ovs_bridges | length > 0
+
+- name: Report per-bridge ovs_setup results
+  ansible.builtin.debug:
+    msg: "{{ ovs_setup_bridge_results }}"
+  when: ovs_setup_bridge_results | default([]) | length > 0
+
+- name: Initialize aggregate port result list
+  ansible.builtin.set_fact:
+    ovs_setup_port_results: []
+
+- name: Add ports and representors
+  ansible.builtin.include_tasks: add_port.yml
+  loop: "{{ ovs_ports }}"
+  loop_control:
+    loop_var: ovs_setup_port_item
+    label: >-
+      {{ (ovs_setup_port_item.port | default('unknown'))
+         ~ ' -> ' ~ (ovs_setup_port_item.bridge | default('unknown')) }}
+  when: ovs_ports | length > 0
+
+- name: Report per-port ovs_setup results
+  ansible.builtin.debug:
+    msg: "{{ ovs_setup_port_results }}"
+  when: ovs_setup_port_results | default([]) | length > 0
+
+- name: Dump ovs-vsctl show
+  ansible.builtin.command:
+    cmd: ovs-vsctl show
+  register: ovs_setup_vsctl_show_result
+  changed_when: false
+  failed_when: false
+
+- name: Dump ovs-appctl dpctl/show
+  ansible.builtin.command:
+    cmd: ovs-appctl dpctl/show
+  register: ovs_setup_dpctl_show_result
+  changed_when: false
+  failed_when: false
+
+- name: Display ovs-vsctl show output
+  ansible.builtin.debug:
+    msg: "{{ ovs_setup_vsctl_show_result.stdout_lines | default([]) }}"
+
+- name: Display ovs-appctl dpctl/show output
+  ansible.builtin.debug:
+    msg: "{{ ovs_setup_dpctl_show_result.stdout_lines | default([]) }}"
+
+- name: Ensure the Ansible local facts directory exists
+  ansible.builtin.file:
+    path: "{{ ovs_setup_facts_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: Write aggregated results to an Ansible local facts file
+  ansible.builtin.copy:
+    dest: "{{ ovs_setup_facts_dir }}/{{ ovs_setup_facts_file_name }}"
+    content: "{{ ovs_setup_facts_content | to_nice_json }}"
+    mode: "0644"
+  vars:
+    ovs_setup_facts_content:
+      hw_offload_enabled: "{{ ovs_enable_hw_offload }}"
+      bridges: "{{ ovs_setup_bridge_results | default([]) }}"
+      ports: "{{ ovs_setup_port_results | default([]) }}"
+      vsctl_show: "{{ ovs_setup_vsctl_show_result.stdout_lines | default([]) }}"
+      dpctl_show: "{{ ovs_setup_dpctl_show_result.stdout_lines | default([]) }}"
+  register: ovs_setup_facts_file_result
+
+- name: Refresh ansible_local facts so downstream tasks in this play see the new file
+  ansible.builtin.setup:
+    filter: ansible_local
+  when:
+    - ovs_setup_refresh_local_facts | bool
+    - ovs_setup_facts_file_result is changed

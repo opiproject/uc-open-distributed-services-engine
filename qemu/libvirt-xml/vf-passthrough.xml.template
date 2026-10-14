@@ -1,0 +1,69 @@
+<!--
+  ODSE lab template: KVM guest with one SR-IOV VF passed through via VFIO.
+
+  Replace every @PLACEHOLDER@ (and the XML comments that mention them)
+  before virsh define. Do not use the sample PCI/MAC/path values on a
+  real host.
+
+  Companion: qemu/vfio/vf-passthrough.md
+-->
+<domain type='kvm'>
+  <name>@VM_NAME@</name>
+  <memory unit='KiB'>@MEMORY_KIB@</memory>
+  <currentMemory unit='KiB'>@MEMORY_KIB@</currentMemory>
+  <vcpu placement='static'>@VCPU_COUNT@</vcpu>
+  <os>
+    <type arch='x86_64' machine='q35'>hvm</type>
+    <!-- aarch64/DPU-hosted guests: change arch/machine/firmware; keep hostdev. -->
+    <boot dev='hd'/>
+  </os>
+  <features>
+    <acpi/>
+    <apic/>
+  </features>
+  <cpu mode='host-passthrough' check='none' migratable='off'/>
+  <clock offset='utc'/>
+  <on_poweroff>destroy</on_poweroff>
+  <on_reboot>restart</on_reboot>
+  <on_crash>destroy</on_crash>
+  <devices>
+    <emulator>/usr/bin/qemu-system-x86_64</emulator>
+    <disk type='file' device='disk'>
+      <driver name='qemu' type='qcow2'/>
+      <source file='@IMAGE_PATH@'/>
+      <target dev='vda' bus='virtio'/>
+    </disk>
+    <!-- Management NIC (optional). Keep this off the VF under test. -->
+    <interface type='network'>
+      <source network='default'/>
+      <model type='virtio'/>
+    </interface>
+    <!--
+      SR-IOV VF passthrough.
+      @VF_DOMAIN@ @VF_BUS@ @VF_SLOT@ @VF_FUNCTION@ come from <VF_PCI>
+      e.g. 0000:03:00.1 -> domain=0x0000 bus=0x03 slot=0x00 function=0x1
+
+      managed='yes': libvirt binds vfio-pci around the guest lifecycle.
+      Use managed='no' if you already bound the VF (see vf-passthrough.md §3).
+    -->
+    <interface type='hostdev' managed='yes'>
+      <source>
+        <address type='pci'
+                 domain='0x@VF_DOMAIN@'
+                 bus='0x@VF_BUS@'
+                 slot='0x@VF_SLOT@'
+                 function='0x@VF_FUNCTION@'/>
+      </source>
+      <mac address='@MAC@'/>
+      <address type='pci' domain='0x0000' bus='0x07' slot='0x00' function='0x0'/>
+    </interface>
+    <serial type='pty'>
+      <target type='isa-serial' port='0'/>
+    </serial>
+    <console type='pty'>
+      <target type='serial' port='0'/>
+    </console>
+    <controller type='pci' index='0' model='pcie-root'/>
+    <memballoon model='virtio'/>
+  </devices>
+</domain>

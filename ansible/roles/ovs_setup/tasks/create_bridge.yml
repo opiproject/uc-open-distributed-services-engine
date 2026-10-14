@@ -1,0 +1,148 @@
+---
+# tasks/create_bridge.yml
+#
+# Task 3 (+ task 5, datapath_type): included once per item in ovs_bridges
+# (see tasks/main.yml). The current item is available as
+# `ovs_setup_bridge_item` via loop_control.
+
+- name: Reset per-bridge result tracking
+  ansible.builtin.set_fact:
+    ovs_setup_bridge_valid: true
+    ovs_setup_bridge_error: null
+    ovs_setup_bridge_changed: false
+
+- name: Determine whether this bridge entry is a mapping or a plain string
+  ansible.builtin.set_fact:
+    ovs_setup_bridge_is_mapping: "{{ ovs_setup_bridge_item is mapping }}"
+
+- name: Extract bridge name and per-bridge options (object form)
+  ansible.builtin.set_fact:
+    ovs_setup_bridge_name: "{{ ovs_setup_bridge_item.name | default('') }}"
+    ovs_setup_bridge_datapath_type: "{{ ovs_setup_bridge_item.datapath_type | default(ovs_datapath_type) }}"
+    ovs_setup_bridge_fail_mode: "{{ ovs_setup_bridge_item.fail_mode | default('') }}"
+    ovs_setup_bridge_external_ids: "{{ ovs_setup_bridge_item.external_ids | default({}) }}"
+    ovs_setup_bridge_extra_set: "{{ ovs_setup_bridge_item.set | default([]) }}"
+  when: ovs_setup_bridge_is_mapping | bool
+
+- name: Extract bridge name and defaults (plain string form)
+  ansible.builtin.set_fact:
+    ovs_setup_bridge_name: "{{ ovs_setup_bridge_item }}"
+    ovs_setup_bridge_datapath_type: "{{ ovs_datapath_type }}"
+    ovs_setup_bridge_fail_mode: ""
+    ovs_setup_bridge_external_ids: {}
+    ovs_setup_bridge_extra_set: []
+  when: not (ovs_setup_bridge_is_mapping | bool)
+
+- name: Mark bridge invalid if no name was provided
+  ansible.builtin.set_fact:
+    ovs_setup_bridge_valid: false
+    ovs_setup_bridge_error: "entry provides no bridge 'name'"
+  when: ovs_setup_bridge_name | length == 0
+
+- name: Create the bridge if it does not already exist (idempotent)
+  ansible.builtin.shell:
+    cmd: |
+      if ovs-vsctl br-exists "{{ ovs_setup_bridge_name }}"; then
+        echo UNCHANGED
+      else
+        ovs-vsctl add-br "{{ ovs_setup_bridge_name }}" && echo CHANGED
+      fi
+  register: ovs_setup_bridge_create_result
+  changed_when: "'CHANGED' in ovs_setup_bridge_create_result.stdout"
+  failed_when: false
+  when: ovs_setup_bridge_valid | bool
+
+- name: Mark bridge invalid if creation failed
+  ansible.builtin.set_fact:
+    ovs_setup_bridge_valid: false
+    ovs_setup_bridge_error: >-
+      failed to ensure bridge '{{ ovs_setup_bridge_name }}' exists:
+      {{ ovs_setup_bridge_create_result.stderr | default('unknown error') | trim }}
+  when:
+    - ovs_setup_bridge_create_result is defined
+    - ovs_setup_bridge_create_result.rc | default(0) != 0
+
+- name: Record bridge creation as a change
+  ansible.builtin.set_fact:
+    ovs_setup_bridge_changed: true
+  when: ovs_setup_bridge_create_result is defined and ovs_setup_bridge_create_result is changed
+
+- name: Configure datapath_type if provided
+  ansible.builtin.include_tasks: set_datapath_type.yml
+  when:
+    - ovs_setup_bridge_valid | bool
+    - ovs_setup_bridge_datapath_type | length > 0
+
+- name: Set fail_mode, if provided (idempotent)
+  ansible.builtin.shell:
+    cmd: |
+      current="$(ovs-vsctl get-fail-mode "{{ ovs_setup_bridge_name }}" 2>/dev/null)"
+      if [ "$current" != "{{ ovs_setup_bridge_fail_mode }}" ]; then
+        ovs-vsctl set-fail-mode "{{ ovs_setup_bridge_name }}" "{{ ovs_setup_bridge_fail_mode }}" && echo CHANGED
+      else
+        echo UNCHANGED
+      fi
+  register: ovs_setup_bridge_fail_mode_result
+  changed_when: "'CHANGED' in ovs_setup_bridge_fail_mode_result.stdout"
+  failed_when: false
+  when:
+    - ovs_setup_bridge_valid | bool
+    - ovs_setup_bridge_fail_mode | length > 0
+
+- name: Warn if setting fail_mode failed
+  ansible.builtin.debug:
+    msg: >-
+      failed to set fail_mode '{{ ovs_setup_bridge_fail_mode }}' on
+      '{{ ovs_setup_bridge_name }}':
+      {{ ovs_setup_bridge_fail_mode_result.stderr | default('unknown error') | trim }}
+  when:
+    - ovs_setup_bridge_fail_mode_result is defined
+    - ovs_setup_bridge_fail_mode_result.rc | default(0) != 0
+
+- name: Set external-ids on the bridge, if provided
+  ansible.builtin.command:
+    cmd: >-
+      ovs-vsctl set bridge "{{ ovs_setup_bridge_name }}"
+      "external-ids:{{ item.key }}={{ item.value }}"
+  loop: "{{ ovs_setup_bridge_external_ids | dict2items }}"
+  register: ovs_setup_bridge_external_ids_result
+  changed_when: true
+  failed_when: false
+  when: ovs_setup_bridge_valid | bool
+
+- name: Apply raw extra 'set' commands for this bridge, if provided
+  ansible.builtin.command:
+    cmd: "ovs-vsctl set {{ item }}"
+  loop: "{{ ovs_setup_bridge_extra_set }}"
+  register: ovs_setup_bridge_extra_set_result
+  changed_when: true
+  failed_when: false
+  when: ovs_setup_bridge_valid | bool
+
+- name: Fail fast on this bridge's error, if configured
+  ansible.builtin.fail:
+    msg: "ovs_setup failed for bridge '{{ ovs_setup_bridge_name | default('unknown') }}': {{ ovs_setup_bridge_error }}"
+  when:
+    - not (ovs_setup_bridge_valid | bool)
+    - ovs_setup_fail_fast | bool
+
+- name: Warn about this bridge's error (fail-fast disabled)
+  ansible.builtin.debug:
+    msg: >-
+      Skipping bridge '{{ ovs_setup_bridge_name | default('unknown') }}':
+      {{ ovs_setup_bridge_error }}
+  when:
+    - not (ovs_setup_bridge_valid | bool)
+    - not (ovs_setup_fail_fast | bool)
+
+- name: Record this bridge's result in the aggregate summary
+  ansible.builtin.set_fact:
+    ovs_setup_bridge_results: "{{ ovs_setup_bridge_results + [ovs_setup_bridge_result] }}"
+  vars:
+    ovs_setup_bridge_result:
+      name: "{{ ovs_setup_bridge_name | default('unknown') }}"
+      datapath_type: "{{ ovs_setup_bridge_datapath_type | default('') }}"
+      fail_mode: "{{ ovs_setup_bridge_fail_mode | default('') }}"
+      valid: "{{ ovs_setup_bridge_valid }}"
+      error: "{{ ovs_setup_bridge_error }}"
+      changed: "{{ ovs_setup_bridge_changed }}"

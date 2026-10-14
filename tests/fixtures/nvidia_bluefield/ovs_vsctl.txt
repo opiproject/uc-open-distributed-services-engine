@@ -1,0 +1,7 @@
+9f2e0b1a-7c4d-4e11-9a00-000000000001
+    Bridge br-int
+        Port br-int
+            Interface br-int
+                type: internal
+        Port pf0vf0
+            Interface pf0vf0

@@ -1,0 +1,6 @@
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN mode DEFAULT group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+2: p0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP mode DEFAULT group default qlen 1000
+    link/ether 00:02:c9:11:22:33 brd ff:ff:ff:ff:ff:ff promiscuity 0 minmtu 68 maxmtu 9978 portname p0 switchid 7cfe90abcdef parentbus pci parentdev 0000:03:00.0 
+3: pf0vf0: <BROADCAST,MULTICAST> mtu 1500 qdisc noop state DOWN mode DEFAULT group default qlen 1000
+    link/ether 00:02:c9:11:22:44 brd ff:ff:ff:ff:ff:ff promiscuity 0 minmtu 68 maxmtu 9978 portname pf0vf0 switchid 7cfe90abcdef parentbus pci parentdev 0000:03:00.0 

@@ -1,0 +1,3 @@
+NIC statistics:
+     tx_packets: 42
+     rx_packets: 41

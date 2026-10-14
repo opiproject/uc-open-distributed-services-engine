@@ -1,0 +1,36 @@
+---
+# tasks/detect_devlink.yml
+#
+# Task 1: Detect the devlink handle for this PF and confirm devlink
+# recognizes the underlying PCI device at all. Not every vendor/firmware
+# combination exposes a devlink instance for a given PF -- this is a
+# genuine per-device capability difference, not something this role works
+# around generically (see docs/vendor-readiness/vendor-capability-matrix.md).
+
+- name: Record the devlink handle for this device
+  ansible.builtin.set_fact:
+    switchdev_setup_devlink_handle: "pci/{{ switchdev_setup_pci_address }}"
+
+- name: Check whether devlink recognizes this PCI device
+  ansible.builtin.command:
+    cmd: "devlink dev show {{ switchdev_setup_devlink_handle }}"
+  register: switchdev_setup_devlink_dev_show
+  changed_when: false
+  failed_when: false
+
+- name: Mark device invalid if devlink does not recognize it
+  ansible.builtin.set_fact:
+    switchdev_setup_device_valid: false
+    switchdev_setup_device_error: >-
+      devlink does not recognize '{{ switchdev_setup_devlink_handle }}'
+      ({{ switchdev_setup_devlink_dev_show.stderr | default('no output') | trim }}).
+      This driver/firmware may not expose a devlink eswitch interface at
+      all for this device.
+  when: switchdev_setup_devlink_dev_show.rc != 0
+
+- name: Report devlink handle detected for this device
+  ansible.builtin.debug:
+    msg: >-
+      devlink handle for '{{ switchdev_setup_resolved_identifier }}' is
+      '{{ switchdev_setup_devlink_handle }}'.
+  when: switchdev_setup_device_valid | bool

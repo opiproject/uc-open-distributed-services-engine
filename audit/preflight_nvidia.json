@@ -1,0 +1,186 @@
+{
+  "blocking_issues": [],
+  "checked_commands": [
+    "virsh",
+    "qemu-system-x86_64",
+    "qemu-kvm",
+    "ovs-vsctl",
+    "ssh"
+  ],
+  "checked_files": [
+    "tools/labctl.py",
+    "tools/lab_cleanup.py",
+    "tools/report_generator.py",
+    "tools/topology-discovery/vf_to_representor_map.py",
+    "plugins/base/remote.py",
+    "plugins/nvidia_bluefield/dpu_ovs.py",
+    "qemu/libvirt-xml/vm-vfio-template.xml",
+    "config/profiles/nvidia-bluefield-dpu-mode.yaml",
+    "docs/operations/dpu-remote-execution.md"
+  ],
+  "checks": [
+    {
+      "blocking": false,
+      "category": "lab_config_validity",
+      "details": {
+        "issues": [],
+        "placeholders": [
+          "host.name",
+          "dpu.pf_name",
+          "dpu.pf_pci"
+        ]
+      },
+      "message": "placeholder fields remain: host.name, dpu.pf_name, dpu.pf_pci (ok for dry-run, not for --apply)",
+      "ok": true
+    },
+    {
+      "blocking": false,
+      "category": "vendor_profile_validity",
+      "details": {
+        "profile": "nvidia-bluefield-dpu-mode",
+        "vendor_type": "nvidia-bluefield"
+      },
+      "message": "vendor.type=nvidia-bluefield profile=nvidia-bluefield-dpu-mode",
+      "ok": true
+    },
+    {
+      "blocking": false,
+      "category": "nvidia_bluefield_dpu_mode_pinning",
+      "details": {
+        "profile": "nvidia-bluefield-dpu-mode"
+      },
+      "message": "NVIDIA profile pinned to DPU-side OVS/OVS-DOCA",
+      "ok": true
+    },
+    {
+      "blocking": false,
+      "category": "dpu_management_reachability_fields",
+      "details": {
+        "management_ip": "192.0.2.10",
+        "placeholder_ip": false,
+        "remote_execution": true,
+        "ssh_port": 22,
+        "ssh_user": "<DPU_SSH_USER>"
+      },
+      "message": "DPU management_ip present",
+      "ok": true
+    },
+    {
+      "blocking": false,
+      "category": "dpu_side_command_execution_availability",
+      "details": {
+        "docs": true,
+        "plugins/base/remote.py": true,
+        "tools/remote_exec.py": true
+      },
+      "message": "RemoteCommandRunner present",
+      "ok": true
+    },
+    {
+      "blocking": false,
+      "category": "dpu_side_ovs_ovs_doca_validation_support",
+      "details": {
+        "docs": true,
+        "plugins/nvidia_bluefield/dpu_ovs.py": true,
+        "plugins/nvidia_bluefield/ovs.py": true
+      },
+      "message": "DPU-side OVS validator present",
+      "ok": true
+    },
+    {
+      "blocking": false,
+      "category": "vm_image_and_libvirt_readiness",
+      "details": {
+        "image_placeholders": [
+          "<VM_IMAGE>",
+          "<VM_IMAGE>"
+        ],
+        "missing_images": [],
+        "prepare_script": true,
+        "qemu": false,
+        "template": true,
+        "virsh": false
+      },
+      "message": "libvirt template and image helper present; virsh not on PATH (dry-run still ok); VM image paths are placeholders",
+      "ok": true
+    },
+    {
+      "blocking": false,
+      "category": "vf_to_representor_mapping_support",
+      "details": {
+        "dpu_docs": true,
+        "host_docs": true,
+        "tool": true
+      },
+      "message": "host mapper and DPU-side nvidia-portname mapping present",
+      "ok": true
+    },
+    {
+      "blocking": false,
+      "category": "stage_output_state_passing",
+      "details": {
+        "lab_state": true,
+        "labctl": true
+      },
+      "message": "labctl stage JSON and lab_state contract present",
+      "ok": true
+    },
+    {
+      "blocking": false,
+      "category": "cleanup_coverage",
+      "details": {
+        "docs": true,
+        "dpu_side_cleanup": false,
+        "lab_cleanup": true
+      },
+      "message": "host cleanup present; DPU-side OVS cleanup is R7",
+      "ok": true
+    },
+    {
+      "blocking": false,
+      "category": "evidence_report_generation_coverage",
+      "details": {
+        "offload_checker": true,
+        "report_generator": true
+      },
+      "message": "report_generator and offload-checker present",
+      "ok": true
+    },
+    {
+      "blocking": false,
+      "category": "management_interface_safety",
+      "details": {
+        "dry_run_default": true,
+        "forbid_management_interface_changes": true,
+        "preserved_interfaces": [
+          "<MGMT_IFACE>"
+        ],
+        "require_apply": true
+      },
+      "message": "management interface protected",
+      "ok": true
+    },
+    {
+      "blocking": false,
+      "category": "vendor_specific_readiness",
+      "details": {},
+      "message": "no extra vendor gate (NVIDIA uses DPU-mode pinning above)",
+      "ok": true
+    }
+  ],
+  "config_path": "config/lab-nvidia-vm2vm.example.yaml",
+  "dry_run": true,
+  "note": "Read-only audit. true/ok only when proven. Missing DPU-mode or remote execution is not treated as READY for --apply.",
+  "readiness_status": "READY_FOR_DRY_RUN_ONLY",
+  "recommended_next_actions": [
+    "Copy the example YAML to a gitignored lab file and replace <PLACEHOLDERS> from discovery.",
+    "Keep dry_run_default true until a written change window; do not --apply yet."
+  ],
+  "vendor": "nvidia-bluefield",
+  "warnings": [
+    "placeholder fields remain: host.name, dpu.pf_name, dpu.pf_pci (ok for dry-run, not for --apply)",
+    "placeholders: ['host.name', 'dpu.pf_name', 'dpu.pf_pci']",
+    "libvirt template and image helper present; virsh not on PATH (dry-run still ok); VM image paths are placeholders",
+    "cleanup does not yet target DPU-side OVS"
+  ]
+}

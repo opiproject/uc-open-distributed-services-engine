@@ -1,0 +1,58 @@
+---
+# tasks/hugepages.yml
+#
+# Hugepage configuration is opt-in (host_base_configure_hugepages: false by
+# default) since it changes host memory allocation behavior. Only 2048 KB
+# (2MB) hugepages are handled here, via a persistent sysctl drop-in plus an
+# immediate apply. Larger page sizes (e.g. 1GB) require kernel
+# command-line parameters and a reboot, which this role deliberately does
+# not attempt -- see the placeholder task below.
+
+- name: Configure persistent 2MB hugepage count via sysctl drop-in
+  ansible.builtin.copy:
+    dest: /etc/sysctl.d/60-odse-host-base-hugepages.conf
+    content: |
+      # Managed by ansible/roles/host_base -- do not edit by hand.
+      vm.nr_hugepages = {{ host_base_hugepage_count }}
+    mode: "0644"
+  register: host_base_hugepages_sysctl_file
+  when:
+    - host_base_hugepage_size_kb | int == 2048
+    - host_base_hugepage_count | int > 0
+
+- name: Apply hugepage sysctl setting immediately
+  ansible.builtin.command:
+    cmd: sysctl -p /etc/sysctl.d/60-odse-host-base-hugepages.conf
+  changed_when: true
+  when: host_base_hugepages_sysctl_file is changed
+
+- name: Placeholder - non-2MB hugepage sizes are not configured by this role
+  ansible.builtin.debug:
+    msg: >-
+      host_base_hugepage_size_kb is set to {{ host_base_hugepage_size_kb }} KB.
+      Only 2048 KB (2MB) hugepages are configured by this role via sysctl.
+      Larger sizes (e.g. 1GB) cannot be reserved reliably at runtime; they
+      require 'default_hugepagesz=1G hugepagesz=1G hugepages=<count>'-style
+      kernel command-line parameters and a reboot. This role does not modify
+      the bootloader configuration -- add the required parameters manually
+      (or via a dedicated bootloader-management role) and re-run this role
+      afterward to verify the resulting allocation.
+  when: host_base_hugepage_size_kb | int != 2048
+
+- name: Read current hugepage allocation from /proc/meminfo
+  ansible.builtin.slurp:
+    src: /proc/meminfo
+  register: host_base_meminfo_raw
+  when: host_base_hugepage_size_kb | int == 2048
+
+- name: Report requested vs. actual hugepage allocation
+  ansible.builtin.debug:
+    msg: >-
+      Requested {{ host_base_hugepage_count }} x 2048 KB hugepages.
+      Current /proc/meminfo hugepage-related lines:
+      {{ (host_base_meminfo_raw.content | b64decode).splitlines() | select('search', 'HugePages') | list }}.
+      If HugePages_Total is lower than requested, the kernel could not
+      allocate enough contiguous memory at runtime -- this commonly requires
+      a reboot with hugepages reserved via the kernel command line instead
+      of sysctl, especially on a host that has been running for a while.
+  when: host_base_hugepage_size_kb | int == 2048

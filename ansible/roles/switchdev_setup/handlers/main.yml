@@ -1,0 +1,7 @@
+---
+# handlers/main.yml for switchdev_setup
+#
+# No handlers are currently defined. Eswitch mode changes and facts-file
+# writes are applied directly in tasks/ rather than deferred to handlers,
+# since ordering relative to representor verification matters within a
+# single device's task sequence.

@@ -1,0 +1,13 @@
+# Cross-vendor readiness matrix
+
+Unknown capabilities are discovery-required. Do not overclaim.
+
+| vendor | profile | first use case | control model | OVS loc | representor loc | API | VM-to-VM | VM-to-Pod | offload | cleanup | status | blockers | next action |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| amd-pensando | amd-pensando-discovery-first | ionic/SR-IOV/representor discovery | discovery-first; no assumed OVS | not assumed | discovery-required | none | discovery-required | discovery-required | ionic stats are not offload proof | no assumed teardown | `GO_FOR_DISCOVERY_ONLY` | AMD_DISCOVERY_ONLY | VM-to-VM DPU forwarding is not yet proven for this AMD Pensando configuration. Do not run configure-forwarding until a representor, switchdev, OVS, or vendor-supported control path is discovered. |
+| intel-ipu | intel-ipu-opi-dpu-operator | network-function-offload (intel-nf), not VM-to-VM OVS | OPI / DPU Operator | not assumed | discovery-required | OPI endpoint; optional DPU Operator | discovery-required | discovery-required | not OVS-TC | intel-nf skeleton | `GO_FOR_DISCOVERY_ONLY` | INTEL_OPI_ENDPOINT_REQUIRED | Use labctl intel-nf; do not assume NVIDIA representors. vm_to_vm=discovery-required |
+| intel-ipu | intel-ipu-opi-dpu-operator | network-function-offload (intel-nf), not VM-to-VM OVS | OPI / DPU Operator | not assumed | discovery-required | OPI endpoint; optional DPU Operator | discovery-required | discovery-required | not OVS-TC | intel-nf skeleton | `GO_FOR_DISCOVERY_ONLY` | INTEL_OPI_ENDPOINT_REQUIRED | Use labctl intel-nf; do not assume NVIDIA representors. vm_to_vm=discovery-required |
+| marvell-octeon | marvell-octeon-dao-ovs-offload | DAO/DPDK OVS-offload discovery | DAO OVS-offload / DPDK representors | dpu | dpu (dpdk) | DAO/DPDK runtime | discovery-required | discovery-required | marvell_dao_evidence skeleton | refuses untracked DPDK unbind | `BLOCKED_MISSING_VENDOR_RUNTIME` | MARVELL_DAO_MISSING | Fill DAO binary/hugepages from hardware discovery; do not copy NVIDIA OVS. |
+| nvidia-bluefield | nvidia-bluefield-dpu-mode | VM-to-VM DPU-side OVS/OVS-DOCA | labctl -> nvidia backend -> DPU-side OVS/OVS-DOCA -> BlueField E-Switch | dpu | dpu | none (DPU OVS) | dry-run | discovery-required | dpu-side planned | dpu-side planned | `GO_FOR_HARDWARE_DRY_RUN` | none | Review first-run NVIDIA DPU-mode runbook; keep --apply gated. |
+| nvidia-bluefield | nvidia-bluefield-dpu-mode | VM-to-VM DPU-side OVS/OVS-DOCA | labctl -> nvidia backend -> DPU-side OVS/OVS-DOCA -> BlueField E-Switch | dpu | dpu | none (DPU OVS) | dry-run | discovery-required | dpu-side planned | dpu-side planned | `GO_FOR_HARDWARE_DRY_RUN` | none | Review first-run NVIDIA DPU-mode runbook; keep --apply gated. |
+

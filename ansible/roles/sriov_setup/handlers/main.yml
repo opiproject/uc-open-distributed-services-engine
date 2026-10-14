@@ -1,0 +1,8 @@
+---
+# handlers/main.yml for sriov_setup
+#
+# This role currently has no tasks that `notify` a handler -- systemd
+# daemon-reload and unit enablement are handled directly and conditionally
+# in tasks/persist_config.yml. This file is present for standard Ansible
+# role structure and as an extension point for downstream users composing
+# this role.

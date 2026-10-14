@@ -1,0 +1,53 @@
+# Placeholder Helm values — OVN-Kubernetes on the HOST (workload) cluster.
+#
+# ODSE overlay only. Not a complete chart. Do not `helm install` this file
+# until a chart name/version is pinned and every key below is verified
+# against that chart's values.schema / README.
+#
+# Companion: ../README.md §2 (host cluster role), §4 (node pairing).
+#
+# chart:      <OVN_KUBERNETES_CHART>          # e.g. ovn-kubernetes
+# version:    <OVN_KUBERNETES_CHART_VERSION>  # pin before any live deploy
+# namespace:  <OVN_K8S_NAMESPACE>             # often ovn-kubernetes
+# cluster:    host
+
+# ---------------------------------------------------------------------------
+# DPU mode: this cluster runs the HOST personality only.
+# ---------------------------------------------------------------------------
+# dpu:
+#   mode: host                    # not "full" single-cluster CNI
+#   # Pairing: how ovnkube-host finds the DPU node that owns representors.
+#   # Confirm actual label/annotation keys from the pinned chart.
+#   hostNodeDpuAnnotation: <HOST_TO_DPU_ANNOTATION_KEY>
+#   dpuNodeNameLabel: <DPU_NODE_NAME_LABEL>
+
+# ---------------------------------------------------------------------------
+# Datapath: host must NOT own representors in off-path DPU topologies.
+# ---------------------------------------------------------------------------
+# ovnkube-node:
+#   dpuHostMode: true
+#   disableOVSOnHostForOffloadedPods: true   # placeholder — verify key
+#   # Geneve/veth path may remain for non-VF pods; keep it explicit.
+#   enableSoftwareFallback: <true|false>
+
+# ---------------------------------------------------------------------------
+# SR-IOV device plugin (often a sibling chart, not ovn-kubernetes itself).
+# ---------------------------------------------------------------------------
+# sriovDevicePlugin:
+#   enabled: true
+#   resourceName: <SRIOV_RESOURCE_NAME>      # vendor-specific; see README §10
+#   pfNames:
+#     - <PF_NAME>
+
+# ---------------------------------------------------------------------------
+# OVN DB: host-side components need NB/SB reachability. Where the DB
+# pods run (host cluster vs dedicated) is TBD with the chart pin.
+# ---------------------------------------------------------------------------
+# ovn:
+#   nbAddress: <OVN_NB_ADDRESS>
+#   sbAddress: <OVN_SB_ADDRESS>
+
+# k8sAPIServer: <HOST_K8S_APISERVER>
+
+# Empty live values on purpose.
+{}

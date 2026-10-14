@@ -1,0 +1,37 @@
+---
+# tasks/set_hw_offload.yml
+#
+# Task 2: reconcile other_config:hw-offload on the Open_vSwitch table to
+# the desired boolean state. Idempotency check and write are combined
+# into a single shell invocation so this task is safe to re-run.
+
+- name: Set other_config:hw-offload to the desired state (idempotent)
+  ansible.builtin.shell:
+    cmd: |
+      desired="{{ ovs_enable_hw_offload | bool | ternary('true', 'false') }}"
+      current="$(ovs-vsctl get Open_vSwitch . other_config:hw-offload 2>/dev/null | tr -d '"')"
+      if [ "$current" != "$desired" ]; then
+        ovs-vsctl set Open_vSwitch . other_config:hw-offload="$desired" && echo CHANGED
+      else
+        echo UNCHANGED
+      fi
+  register: ovs_setup_hw_offload_result
+  changed_when: "'CHANGED' in ovs_setup_hw_offload_result.stdout"
+  failed_when: ovs_setup_hw_offload_result.rc != 0
+
+- name: Report hw-offload configuration
+  ansible.builtin.debug:
+    msg: >-
+      other_config:hw-offload is set to
+      '{{ ovs_enable_hw_offload | bool | ternary('true', 'false') }}'.
+      {{ 'A restart of the OVS service may be required for this to take full effect on existing ports/flows (behavior varies by OVS version) -- see README.md.'
+         if ovs_setup_hw_offload_result is changed else '' }}
+
+- name: Restart OVS service after a hw-offload change, if configured to do so
+  ansible.builtin.service:
+    name: "{{ ovs_setup_service_name }}"
+    state: restarted
+  when:
+    - ovs_setup_hw_offload_result is changed
+    - ovs_setup_restart_on_hw_offload_change | bool
+    - ovs_setup_manage_service | bool

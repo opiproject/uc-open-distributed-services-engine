@@ -1,0 +1,95 @@
+## ODSE VM-to-VM lab guest cloud-init user-data.
+##
+## Copy this file, replace every <PLACEHOLDER>, and pass the result to
+## `prepare-vm-image.sh --method cloud-init` (which feeds it to
+## cloud-localds / cloud-init NoCloud). See
+## ../../../docs/operations/vm-image-preparation.md.
+##
+## SECURITY: this file must never contain a plaintext password or a
+## private key. Only a *public* SSH key belongs in
+## ssh_authorized_keys. Password login is deliberately disabled below
+## (ssh_pwauth: false, lock_passwd: true).
+#cloud-config
+
+hostname: <HOSTNAME>
+manage_etc_hosts: true
+
+users:
+  - name: <SSH_USER>
+    groups: [sudo]
+    shell: /bin/bash
+    sudo: ["ALL=(ALL) NOPASSWD:ALL"]
+    lock_passwd: true
+    ssh_authorized_keys:
+      - <SSH_PUBLIC_KEY>
+
+# Key-based SSH only. Do not flip these to enable password auth on a
+# lab guest that may be reachable from anything other than the
+# dedicated management network.
+ssh_pwauth: false
+disable_root: true
+
+# Explicit, rather than relying on the base image's own /etc/cloud/cloud.cfg
+# module list to include these by default (it normally does, for official
+# cloud images -- but "normally" has already bitten this lab once with
+# cloud-init not running at all when the NoCloud seed ISO wasn't attached;
+# see docs/operations/vm-image-preparation.md, "Not enough disk space to
+# install packages"). Grows the root partition + filesystem to fill
+# whatever --size prepare-vm-image.sh built the qcow2 overlay as.
+growpart:
+  mode: auto
+  devices: ["/"]
+resize_rootfs: true
+
+package_update: true
+package_upgrade: false
+packages:
+  - iproute2
+  - iputils-ping
+  - ethtool
+  - iperf3
+  - tcpdump
+  - openssh-server
+
+write_files:
+  # The `sudo:` NOPASSWD grant on <SSH_USER> above is not always enough
+  # by itself: some base images (RHEL/CentOS/Rocky/Alma family
+  # especially) ship a global `Defaults requiretty` in /etc/sudoers,
+  # which makes sudo demand a controlling terminal for *every*
+  # invocation regardless of NOPASSWD -- and since lock_passwd:true
+  # means this user has no password to type even if prompted, that
+  # combination permanently locks this user out of sudo over a
+  # non-interactive SSH session (`ssh host bash -s -- ...`, exactly how
+  # configure-vm-ips/run-traffic invoke guest-network-setup.sh). Scope
+  # the exception to just this user rather than touching the global
+  # Defaults line. See "sudo: a terminal is required to read the
+  # password" in vm-image-preparation.md.
+  - path: /etc/sudoers.d/90-<SSH_USER>-no-tty
+    permissions: "0440"
+    owner: root:root
+    content: |
+      Defaults:<SSH_USER> !requiretty
+  - path: /usr/local/bin/guest-network-setup.sh
+    permissions: "0755"
+    owner: root:root
+    content: |
+      # Populated from qemu/images/guest-network-setup.sh.template by
+      # prepare-vm-image.sh. Left as a placeholder here so the file
+      # exists at a known path even if you inject the real script
+      # later over SSH instead.
+      #!/usr/bin/env bash
+      echo "guest-network-setup.sh was not injected by prepare-vm-image.sh" >&2
+      exit 1
+
+runcmd:
+  # ssh.service vs sshd.service is one is a symlink alias of the other,
+  # depending on distro -- `systemctl enable` on the alias name fails
+  # with "Refusing to operate on alias name" on newer systemd if it
+  # isn't already enabled. is-enabled first (usually already true on
+  # cloud images that ship openssh-server preinstalled+enabled) avoids
+  # the warning entirely in the common case; the enable fallbacks are
+  # last-resort and their failure is not fatal to this runcmd.
+  - [sh, -c, "systemctl is-enabled ssh.service >/dev/null 2>&1 || systemctl is-enabled sshd.service >/dev/null 2>&1 || systemctl enable --now ssh.service 2>/dev/null || systemctl enable --now sshd.service 2>/dev/null || true"]
+  - [ip, link, set, lo, up]
+
+final_message: "ODSE vm2vm lab guest <HOSTNAME> cloud-init finished after $UPTIME seconds"

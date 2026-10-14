@@ -1,0 +1,50 @@
+# ADVANCED / NON-DEFAULT NVIDIA profile.
+#
+# Host-side switchdev + host OVS owning representors (ConnectX/NIC mode
+# or BlueField NIC-mode). Do not use this for the vDSE-like VM-to-VM lab.
+# Select it only by setting vendor.profile: nvidia-connectx-host-switchdev.
+#
+# Default remains config/profiles/nvidia-bluefield-dpu-mode.yaml.
+
+schema: odse-lab-profile/v1alpha1
+profile: nvidia-connectx-host-switchdev
+
+vendor:
+  type: nvidia-bluefield
+  profile: nvidia-connectx-host-switchdev
+
+nvidia:
+  mode: host-switchdev
+  ovs_location: host
+  representor_location: host
+  datapath: ovs-tc
+  allow_host_ovs_for_forwarding: true
+
+host:
+  role:
+    - kvm
+    - qemu
+    - libvirt
+    - vf-passthrough
+    - ovs-owner
+    - representor-owner
+    - forwarding-owner
+
+host_forwarding_control:
+  enabled: true
+
+dpu:
+  role: []
+  enable_switchdev: true
+  preferred_datapath: system
+
+dpu_forwarding_control:
+  enabled: false
+
+representor_mapping:
+  location: host
+  strategy: sysfs-devlink
+  require_high_confidence: false
+
+ovs:
+  datapath_type: system

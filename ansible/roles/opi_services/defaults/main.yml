@@ -1,0 +1,30 @@
+---
+# defaults/main.yml for opi_services
+#
+# Skeleton: does not install a real gRPC server yet. Variables name the
+# intended contract so playbooks can start wiring vendor tracks.
+
+# Where the adapter process should run: dpu OS, hypervisor, or both.
+# Confirm per vendor before enabling.
+opi_services_run_on: dpu   # dpu | host | both
+
+# Selects kubernetes/opi/adapter vendor_*.py via load_backend().
+opi_services_backend: ""   # amd | nvidia | intel | marvell | simulated
+
+# Listen address for a future API server. Placeholder.
+opi_services_listen: "127.0.0.1"
+opi_services_port: 50051
+
+# TLS: required before exposing beyond loopback. Default off so the
+# skeleton cannot accidentally advertise an open management API.
+opi_services_tls_enabled: false
+# opi_services_tls_cert: /etc/odse/opi/tls.crt
+# opi_services_tls_key: /etc/odse/opi/tls.key
+
+# Install the Python adapter files onto the target. Off by default.
+opi_services_install_adapter: false
+opi_services_adapter_src: "{{ playbook_dir }}/../kubernetes/opi/adapter"
+opi_services_adapter_dest: /usr/local/lib/odse/opi-adapter
+
+opi_services_manage_service: false
+opi_services_service_name: odse-opi-adapter

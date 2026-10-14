@@ -1,0 +1,66 @@
+---
+# tasks/bind_vf_drivers.yml
+#
+# Best-effort VF driver management, controlled by the current item's
+# `autoload_driver` and `vf_driver` fields:
+#
+#   autoload_driver: false  -> unbind each VF from whatever driver
+#                              auto-probed it after creation (leaving it
+#                              driver-less), unless vf_driver is also set.
+#   vf_driver: "<name>"     -> explicitly (re)bind each VF to <name> via
+#                              driver_override + a probe.
+#
+# This is a generic, sysfs-based mechanism and is not guaranteed to work
+# identically across every vendor driver -- see README.md
+# "Known limitations". Failures here are reported but do not mark the PF
+# invalid, since VF creation itself already succeeded by this point.
+
+- name: Unbind VF drivers when autoload_driver is disabled for {{ sriov_setup_pf.pf_name }}
+  ansible.builtin.shell:
+    cmd: |
+      devpath="/sys/bus/pci/devices/{{ item.pci_address }}"
+      if [ -L "$devpath/driver" ]; then
+        echo "{{ item.pci_address }}" > "$devpath/driver/unbind"
+      fi
+  register: sriov_setup_vf_unbind_result
+  changed_when: sriov_setup_vf_unbind_result.rc == 0
+  failed_when: false
+  loop: "{{ sriov_setup_discovered_vfs }}"
+  loop_control:
+    label: "{{ item.pci_address }}"
+  when: not (sriov_setup_pf.autoload_driver | default(true) | bool)
+
+- name: Bind VFs to the requested vf_driver for {{ sriov_setup_pf.pf_name }}
+  ansible.builtin.shell:
+    cmd: |
+      devpath="/sys/bus/pci/devices/{{ item.pci_address }}"
+      echo "{{ sriov_setup_pf.vf_driver }}" > "$devpath/driver_override" || true
+      if [ -L "$devpath/driver" ]; then
+        echo "{{ item.pci_address }}" > "$devpath/driver/unbind" || true
+      fi
+      echo "{{ item.pci_address }}" > /sys/bus/pci/drivers_probe || true
+  register: sriov_setup_vf_bind_result
+  changed_when: false
+  failed_when: false
+  loop: "{{ sriov_setup_discovered_vfs }}"
+  loop_control:
+    label: "{{ item.pci_address }}"
+  when: (sriov_setup_pf.vf_driver | default('')) | length > 0
+
+- name: Report any VF driver bind/unbind failures
+  ansible.builtin.debug:
+    msg: >-
+      Some VF driver bind/unbind operations for '{{ sriov_setup_pf.pf_name }}'
+      returned a non-zero exit code and may not have applied cleanly.
+      Review sriov_setup_vf_unbind_result and sriov_setup_vf_bind_result for
+      details, and verify manually with
+      'ls -l /sys/bus/pci/devices/<pci>/driver'. This is best-effort and
+      does not fail the play.
+  vars:
+    sriov_setup_unbind_failures: >-
+      {{ sriov_setup_vf_unbind_result.results | default([])
+         | selectattr('rc', 'defined') | rejectattr('rc', 'equalto', 0) | list }}
+    sriov_setup_bind_failures: >-
+      {{ sriov_setup_vf_bind_result.results | default([])
+         | selectattr('rc', 'defined') | rejectattr('rc', 'equalto', 0) | list }}
+  when: (sriov_setup_unbind_failures | length > 0) or (sriov_setup_bind_failures | length > 0)

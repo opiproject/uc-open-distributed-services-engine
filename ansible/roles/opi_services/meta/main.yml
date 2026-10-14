@@ -1,0 +1,23 @@
+---
+galaxy_info:
+  role_name: opi_services
+  namespace: odse
+  author: Open Distributed Services Engine contributors
+  description: >-
+    Skeleton role to deploy the OPI-aligned adapter/API on a DPU or host.
+    Does not start a server until kubernetes/opi/adapter backends exist.
+  license: Apache-2.0
+  min_ansible_version: "2.14"
+  platforms:
+    - name: EL
+      versions: ["8", "9"]
+    - name: Ubuntu
+      versions: [all]
+    - name: Debian
+      versions: [all]
+  galaxy_tags:
+    - dpu
+    - opi
+    - networking
+
+dependencies: []

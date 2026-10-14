@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ODSE User Guide — What, Why, and How</title>
+  <style>
+    :root {
+      --bg: #f4f1ea;
+      --paper: #fffdf8;
+      --ink: #1c1915;
+      --muted: #5c564c;
+      --line: #d9d0c3;
+      --accent: #0f4c5c;
+      --accent-2: #c45c26;
+      --ok: #2f6f4e;
+      --warn: #8a5a12;
+      --no: #8b2e2e;
+      --code-bg: #1c1915;
+      --code-fg: #f4f1ea;
+      --shadow: 0 1px 0 rgba(28,25,21,.06);
+      --sidebar: 17.5rem;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--bg);
+      font: 16px/1.55 "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+    }
+    a { color: var(--accent); }
+    a:hover { color: var(--accent-2); }
+    code, kbd, pre {
+      font-family: "IBM Plex Mono", "ui-monospace", "Cascadia Code", Consolas, monospace;
+      font-size: 0.86em;
+    }
+    code, kbd {
+      background: #ece6db;
+      padding: 0.1em 0.35em;
+      border-radius: 3px;
+    }
+    pre {
+      background: var(--code-bg);
+      color: var(--code-fg);
+      padding: 1rem 1.1rem;
+      overflow-x: auto;
+      border-radius: 6px;
+      line-height: 1.45;
+      box-shadow: var(--shadow);
+    }
+    pre code { background: none; padding: 0; color: inherit; }
+    .layout {
+      display: grid;
+      grid-template-columns: var(--sidebar) minmax(0, 1fr);
+      min-height: 100vh;
+    }
+    nav.toc {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow: auto;
+      background: var(--accent);
+      color: #e8f0f2;
+      padding: 1.4rem 1.1rem 2rem;
+    }
+    nav.toc .brand {
+      font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+      font-weight: 700;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      font-size: 0.78rem;
+      color: #9fd0d8;
+      margin-bottom: 0.35rem;
+    }
+    nav.toc h1 {
+      font-size: 1.15rem;
+      margin: 0 0 1.2rem;
+      font-weight: 600;
+      line-height: 1.25;
+      color: #fff;
+    }
+    nav.toc a { color: #d5e8eb; text-decoration: none; }
+    nav.toc a:hover { color: #fff; }
+    nav.toc ol { margin: 0; padding: 0 0 0 1.1rem; }
+    nav.toc li { margin: 0.35rem 0; font-size: 0.88rem; font-family: "IBM Plex Sans", "Segoe UI", sans-serif; }
+    nav.toc .group {
+      margin-top: 1.1rem;
+      font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+      font-size: 0.72rem;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: #9fd0d8;
+    }
+    main { padding: 2.2rem clamp(1.2rem, 4vw, 3.2rem) 4rem; max-width: 52rem; }
+    header.hero {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 1.6rem 1.7rem 1.4rem;
+      margin-bottom: 2rem;
+    }
+    header.hero p.lede {
+      font-size: 1.15rem;
+      margin: 0.4rem 0 0.8rem;
+    }
+    .pills { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+    .pill {
+      font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+      font-size: 0.75rem;
+      padding: 0.22rem 0.55rem;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: #fff;
+    }
+    .pill.go { border-color: #b7d4c4; color: var(--ok); }
+    .pill.no { border-color: #e0b8b8; color: var(--no); }
+    .pill.warn { border-color: #e4cda6; color: var(--warn); }
+    h2 {
+      font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+      font-size: 1.55rem;
+      margin: 2.4rem 0 0.7rem;
+      padding-top: 0.4rem;
+      border-top: 1px solid var(--line);
+    }
+    h2:first-of-type { border-top: 0; margin-top: 0; }
+    h3 {
+      font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+      font-size: 1.15rem;
+      margin: 1.7rem 0 0.5rem;
+      color: var(--accent);
+    }
+    h4 {
+      font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+      font-size: 1rem;
+      margin: 1.2rem 0 0.4rem;
+    }
+    p, li { color: var(--ink); }
+    .muted { color: var(--muted); }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.95rem;
+      background: var(--paper);
+      margin: 0.8rem 0 1.2rem;
+    }
+    th, td {
+      text-align: left;
+      vertical-align: top;
+      padding: 0.5rem 0.65rem;
+      border-bottom: 1px solid var(--line);
+    }
+    th {
+      font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+      font-size: 0.78rem;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      color: var(--muted);
+      background: #efe9de;
+    }
+    .callout {
+      border-left: 4px solid var(--accent);
+      background: var(--paper);
+      padding: 0.75rem 1rem;
+      margin: 1rem 0;
+    }
+    .callout.warn { border-left-color: var(--accent-2); }
+    .callout.no { border-left-color: var(--no); }
+    .step {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 1rem 1.15rem 0.4rem;
+      margin: 1.1rem 0 1.4rem;
+    }
+    .step .num {
+      font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+      font-size: 0.75rem;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--accent-2);
+    }
+    ol.how > li { margin: 0.35rem 0; }
+    .two {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.8rem;
+    }
+    @media (max-width: 920px) {
+      .layout { grid-template-columns: 1fr; }
+      nav.toc { position: relative; height: auto; }
+      .two { grid-template-columns: 1fr; }
+    }
+    footer {
+      margin-top: 3rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <nav class="toc" aria-label="Contents">
+      <div class="brand">ODSE</div>
+      <h1>User guide</h1>
+      <div class="group">Orientation</div>
+      <ol>
+        <li><a href="#what">What</a></li>
+        <li><a href="#why">Why</a></li>
+      </ol>
+      <div class="group">How — first activities</div>
+      <ol>
+        <li><a href="#how-0">0. Prerequisites</a></li>
+        <li><a href="#how-1">1. Confirm the toolkit</a></li>
+        <li><a href="#how-2">2. Preflight + validate</a></li>
+        <li><a href="#how-3">3. Discovery</a></li>
+        <li><a href="#how-4">4. Full dry-run pipeline</a></li>
+        <li><a href="#how-5">5. Read the results</a></li>
+      </ol>
+      <div class="group">How — lab and hardware</div>
+      <ol>
+        <li><a href="#how-6">6. Real lab YAML</a></li>
+        <li><a href="#how-7">7. NVIDIA VM-to-VM stages</a></li>
+        <li><a href="#how-8">8. Traffic, evidence, cleanup</a></li>
+      </ol>
+      <div class="group">How — advanced</div>
+      <ol>
+        <li><a href="#how-9">9. Other vendors</a></li>
+        <li><a href="#how-10">10. Advanced operations</a></li>
+      </ol>
+      <div class="group">Reference</div>
+      <ol>
+        <li><a href="#safety">Safety rules</a></li>
+        <li><a href="#glossary">Glossary</a></li>
+        <li><a href="#docs">Companion docs</a></li>
+      </ol>
+    </nav>
+
+    <main>
+      <header class="hero">
+        <p class="muted" style="margin:0;font-family:'IBM Plex Sans',sans-serif;letter-spacing:.08em;text-transform:uppercase;font-size:.75rem;">Open Distributed Services Engine</p>
+        <h1 style="margin:.35rem 0 .4rem;font-family:'IBM Plex Sans',sans-serif;font-size:2rem;">What, why, and how to use ODSE</h1>
+        <p class="lede">A lab operator’s guide to discovering DPUs/IPUs, planning VM-to-VM forwarding, and collecting honest offload evidence — without treating planned commands as live hardware proof.</p>
+        <div class="pills">
+          <span class="pill go">Dry-run: go</span>
+          <span class="pill no">Hardware --apply: gated</span>
+          <span class="pill">Control point: labctl.py</span>
+          <span class="pill warn">One DPU at a time</span>
+        </div>
+      </header>
+
+      <h2 id="what">What</h2>
+      <p>ODSE is an open toolkit for a <strong>hardware-accelerated, DPU/IPU-offloaded</strong> infrastructure path on Linux. It is the lab and automation layer for a vDSE-like outcome using open components: KVM/QEMU, SR-IOV, representor ports, OVS/OVS-DOCA where the vendor actually owns that path, and vendor-neutral OPI-style control where that is the vendor’s model.</p>
+      <p>For day-to-day use, ODSE is not “run Ansible and hope.” It is a <strong>staged lab workflow</strong> with one operator command:</p>
+      <pre><code>python tools/labctl.py &lt;domain&gt; &lt;stage&gt; --config &lt;file&gt;</code></pre>
+      <p><code>labctl</code> hides vendor CLIs. You do not connect two lab VMs by typing <code>ovs-vsctl</code>, <code>devlink</code>, DAO, OPI, or <code>tc</code> by hand.</p>
+
+      <h3>The first real use case</h3>
+      <p>The implemented lab shape is deliberately small:</p>
+      <ul>
+        <li>One server</li>
+        <li>One selected DPU/IPU</li>
+        <li>Two SR-IOV VFs</li>
+        <li>Two KVM/QEMU VMs (VF0 → VM1, VF1 → VM2)</li>
+        <li>Vendor-correct representors and forwarding (NVIDIA: on the DPU)</li>
+        <li>Guest traffic, then offload evidence, then cleanup of lab-owned objects</li>
+      </ul>
+      <p>That is <code>labctl vm2vm</code>. Other domains exist because not every vendor is a VM-to-VM OVS story: Intel’s first-run path is network-function offload on the IPU; AMD is discovery-first until a forwarding control path is proven.</p>
+
+      <h3>What lives in the repo</h3>
+      <table>
+        <thead><tr><th>Area</th><th>Role</th></tr></thead>
+        <tbody>
+          <tr><td><code>tools/labctl.py</code></td><td>Operator control point: stages, dry-run, apply gate, result JSON</td></tr>
+          <tr><td><code>plugins/</code></td><td>Per-vendor backends (NVIDIA, Marvell, Intel, AMD). Separate code paths; no copied NVIDIA OVS onto other vendors</td></tr>
+          <tr><td><code>config/</code></td><td>Example lab YAML. Copy to a gitignored <code>lab-*-vm2vm.yaml</code> before filling real values</td></tr>
+          <tr><td><code>tools/</code></td><td>Inventory, representor map, offload checker, preflight, readiness matrix, reports, cleanup</td></tr>
+          <tr><td><code>qemu/</code></td><td>Libvirt XML template and guest image notes</td></tr>
+          <tr><td><code>tests/</code></td><td>Unit/vendor tests (no hardware) and result directories per run</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Vendor tracks (honest status)</h3>
+      <table>
+        <thead><tr><th>Vendor</th><th>First operator path</th><th>What it is today</th></tr></thead>
+        <tbody>
+          <tr><td>NVIDIA BlueField</td><td><code>labctl vm2vm</code></td><td>Default profile <code>nvidia-bluefield-dpu-mode</code>: OVS/OVS-DOCA and representors on the DPU; host runs KVM/VFIO only. First dry-run target.</td></tr>
+          <tr><td>Intel IPU</td><td><code>labctl intel-nf</code></td><td>Network-function offload via OPI / DPU Operator. Not VM-to-VM OVS. Missing OPI endpoint is a hard stop, not a guess.</td></tr>
+          <tr><td>AMD Pensando</td><td><code>labctl amd-discovery</code></td><td>Discovery of ionic/RDMA/SR-IOV. Representors, switchdev, and OVS are not assumed.</td></tr>
+          <tr><td>Marvell OCTEON</td><td><code>labctl vm2vm</code> after DAO/DPDK</td><td>Blocked until DAO, DPDK, and a representor source are present. Host OVS is not the forwarding path.</td></tr>
+        </tbody>
+      </table>
+
+      <h3>What “done” looks like for a run</h3>
+      <p>Every stage writes JSON under <code>tests/results/&lt;vendor&gt;/&lt;run-id&gt;/</code>. A report generator turns that directory into one summary. Verdicts are conservative: unknown offload stays unknown. A planned SSH command with <code>executed: false</code> is not DPU proof.</p>
+
+      <h2 id="why">Why</h2>
+      <h3>Why this project exists</h3>
+      <p>VMware vDSE showed a useful model: move networking services off the host CPU onto a DPU, keep a consistent operator story across cards. That stack is proprietary. The open ecosystem already has the parts (SR-IOV, switchdev, OVS hardware offload, OVN, vDPA, OPI) but not one testable, vendor-honest assembly. ODSE exists so adopting offload does not require adopting a closed hypervisor.</p>
+
+      <h3>Why one control point</h3>
+      <p>If every operator improvises <code>ovs-vsctl</code> on the host, NVIDIA DPU-mode labs silently become ConnectX host-switchdev labs. If Intel is driven with NVIDIA representor names, the IPU path is fake. <code>labctl</code> plus <code>ForwardingIntent</code> force a single question: <em>what did the operator ask for, and which backend actually owns forwarding?</em></p>
+
+      <h3>Why dry-run is the default</h3>
+      <p>Creating VFs, flipping eswitch mode, defining libvirt domains, and mutating DPU OVS are destructive. Three gates must all agree before a mutation runs:</p>
+      <ol>
+        <li>You passed <code>--apply</code> (and did not also pass <code>--dry-run</code>, which always wins).</li>
+        <li>The YAML has <code>safety.dry_run_default: false</code>.</li>
+        <li>The apply readiness gate passes (validated config, unchanged hash, management interface protected, vendor profile valid, prior stage outputs, a prior dry-run plan for that stage).</li>
+      </ol>
+      <p>Example YAML keeps dry-run on. That is intentional. <code>run-all-safe</code> forces dry-run even if you pass <code>--apply</code>.</p>
+
+      <h3>Why unknown stays unknown</h3>
+      <p>Missing sysfs, empty SSH stdout, or “command not found” on a laptop is <strong>not</strong> evidence that IOMMU is off or that DOCA is missing. ODSE records <code>null</code> / <code>UNKNOWN</code> rather than inventing <code>offloaded:yes</code> or <code>ready: false</code> from absence. Hardware claims need inspected evidence.</p>
+
+      <h3>Why vendors are not copied</h3>
+      <p>NVIDIA DPU-mode OVS-DOCA is NVIDIA-specific. Marvell uses DAO/DPDK representors. Intel uses OPI and a DPU Operator. AMD starts at ionic discovery. Copying host OVS-TC onto those tracks would produce green demos and false certification.</p>
+
+      <h2 id="how">How</h2>
+      <p>Work top to bottom. Do not skip to <code>--apply</code>. First activities run on a laptop with no DPU. Advanced activities assume a filled lab file and a written change window.</p>
+
+      <div class="step" id="how-0">
+        <div class="num">Activity 0 · Setup</div>
+        <h3>Prerequisites</h3>
+        <ul>
+          <li>Python 3.7 or later. The stdlib YAML fallback works if PyYAML is not installed.</li>
+          <li>This repository, commands run from the <strong>repo root</strong>.</li>
+          <li>Dry-run: no DPU, no <code>ovs-vsctl</code>, no libvirt required.</li>
+          <li>Later <code>--apply</code>: Linux host, one DPU/IPU, KVM/QEMU/libvirt, two guest images, and for NVIDIA DPU mode SSH to the BlueField Arm OS.</li>
+        </ul>
+        <pre><code>cd open-distributed-services-engine
+python --version</code></pre>
+      </div>
+
+      <div class="step" id="how-1">
+        <div class="num">Activity 1 · First commands</div>
+        <h3>Confirm the toolkit is the control point</h3>
+        <p>List backends, then print help. You should see three domains: <code>vm2vm</code>, <code>intel-nf</code>, <code>amd-discovery</code>.</p>
+        <pre><code>python tools/vendorctl.py list-vendors
+python tools/labctl.py --help
+python tools/labctl.py vm2vm --help</code></pre>
+        <p>Optional: run the no-hardware tests so you know the tree is healthy.</p>
+        <pre><code>python -m unittest discover -s tests/unit
+python -m unittest discover -s tests/vendor
+python -m unittest discover -s tests/vendor-certification</code></pre>
+        <div class="callout">If a test ever hangs on SSH to <code>192.0.2.10</code>, that is a live probe leaking through dry-run. Stop it. Dry-run must record argv with <code>executed: false</code>.</div>
+      </div>
+
+      <div class="step" id="how-2">
+        <div class="num">Activity 2 · Readiness</div>
+        <h3>Preflight and validate-config</h3>
+        <p>Use the NVIDIA example. It is full of placeholders and is supposed to be dry-run only.</p>
+        <pre><code>python tools/preflight_readiness.py --config config/lab-nvidia-vm2vm.example.yaml --markdown
+
+python tools/labctl.py vm2vm validate-config --config config/lab-nvidia-vm2vm.example.yaml --json</code></pre>
+        <p><strong>Good preflight:</strong> <code>READY_FOR_DRY_RUN_ONLY</code>, empty <code>blocking_issues</code>, warnings about placeholders and VM images. Not “cleanup does not yet target DPU-side OVS” (that check is stale if you still see it — current cleanup plans DPU OVS for lab-owned objects).</p>
+        <p><strong>Good validate-config:</strong> <code>valid: true</code>. DPU OVS validation is planned <code>ssh … ovs-vsctl get/show</code> on the DPU. You must <em>not</em> see a local host command <code>ovs-vsctl --may-exist add-br br-int</code> at this stage. Bridge create belongs to <code>prepare-ovs</code>, over DPU SSH.</p>
+      </div>
+
+      <div class="step" id="how-3">
+        <div class="num">Activity 3 · See the hardware story (read-only)</div>
+        <h3>Discovery and capability report</h3>
+        <p>On a laptop these probes mostly return “command not found.” That is fine. You are proving the pipeline, not inventing devices.</p>
+        <pre><code>python tools/vendorctl.py discover --vendor nvidia-bluefield --json
+python tools/capability_report.py --format markdown
+
+python tools/labctl.py vm2vm discover --config config/lab-nvidia-vm2vm.example.yaml --json</code></pre>
+        <p>On a real host, also:</p>
+        <pre><code>python tools/inventory/dpu_inventory.py --pretty</code></pre>
+        <p>Fill PCI and PF names from this output later. Do not copy <code>&lt;PF_PCI&gt;</code> from the example into a live file and call it inventory.</p>
+      </div>
+
+      <div class="step" id="how-4">
+        <div class="num">Activity 4 · Preview everything</div>
+        <h3>Full dry-run pipeline</h3>
+        <p><code>run-all-safe</code> walks the VM-to-VM stages in order and <strong>always</strong> stays dry-run. It never runs <code>cleanup</code>.</p>
+        <pre><code>python tools/labctl.py vm2vm run-all-safe --config config/lab-nvidia-vm2vm.example.yaml --dry-run --json</code></pre>
+        <p>Then generate the cross-vendor go/no-go table:</p>
+        <pre><code>python tools/vendor_readiness_matrix.py --configs config/*.yaml --output tests/results/vendor-readiness-matrix.md</code></pre>
+        <p>Expect NVIDIA <code>GO_FOR_HARDWARE_DRY_RUN</code>, Intel/AMD discovery-oriented, Marvell blocked until DAO/DPDK. That matrix is not permission to <code>--apply</code> the example file.</p>
+      </div>
+
+      <div class="step" id="how-5">
+        <div class="num">Activity 5 · Learn the evidence layout</div>
+        <h3>Read stage JSON and a report</h3>
+        <p>Look under <code>tests/results/nvidia-bluefield/&lt;run-id&gt;/</code>. Typical files: <code>run-metadata.json</code>, <code>validate-config.json</code>, <code>discover.json</code>, <code>representor-map.json</code>, <code>prepare-ovs.json</code>, <code>configure-forwarding.json</code>.</p>
+        <p>For every command object, check:</p>
+        <ul>
+          <li><code>dry_run: true</code> and <code>executed: false</code> on this path</li>
+          <li>NVIDIA DPU mode: argv starts with <code>ssh</code>, not bare <code>ovs-vsctl</code></li>
+          <li>Offload fields are <code>null</code> unless evidence was actually collected</li>
+        </ul>
+        <pre><code>python tools/report_generator.py --input-dir tests/results/nvidia-bluefield/&lt;run-id&gt;/ --output result-summary.md</code></pre>
+        <p>On a dry-run laptop the verdict is often <code>INCONCLUSIVE</code> or functional-only. That is correct. Do not chase <code>PASS_OFFLOAD_CONFIRMED</code> from planned probes.</p>
+      </div>
+
+      <div class="step" id="how-6">
+        <div class="num">Activity 6 · Leave the example behind</div>
+        <h3>Create a real lab YAML</h3>
+        <p>Hardware work uses a <em>copy</em>. The copy is gitignored.</p>
+        <pre><code>cp config/lab-nvidia-vm2vm.example.yaml config/lab-nvidia-vm2vm.yaml</code></pre>
+        <p>Replace placeholders from discovery, not from documentation ranges:</p>
+        <table>
+          <thead><tr><th>Field</th><th>Source</th></tr></thead>
+          <tbody>
+            <tr><td><code>host.name</code>, <code>host.management_interface</code></td><td>The host you will not break. Management iface is protected; never mutate it.</td></tr>
+            <tr><td><code>dpu.management_ip</code>, <code>dpu.ssh_user</code>, <code>dpu.ssh_key_path</code></td><td>Reachability of BlueField Arm OS</td></tr>
+            <tr><td><code>dpu.pf_name</code>, <code>dpu.pf_pci</code></td><td><code>dpu_inventory.py</code> / <code>vendorctl discover</code></td></tr>
+            <tr><td>VM image paths</td><td>Prepared guests; see <code>docs/operations/vm-image-preparation.md</code></td></tr>
+          </tbody>
+        </table>
+        <p>Keep <code>safety.dry_run_default: true</code> until you have a written change window. Re-run preflight on the filled file. Stay at <code>READY_FOR_DRY_RUN_ONLY</code> until you deliberately flip dry-run off <em>and</em> the apply gate can pass.</p>
+        <div class="callout no">Never <code>--apply</code> against <code>*.example.yaml</code>. Never invent representor names (<code>eth0v1</code> is not a BlueField VF representor; expect <code>pf0vf0</code> / <code>pf0vf1</code> from DPU <code>devlink</code> + portname).</div>
+      </div>
+
+      <div class="step" id="how-7">
+        <div class="num">Activity 7 · NVIDIA VM-to-VM (the main path)</div>
+        <h3>Stage-by-stage, dry-run first</h3>
+        <p>Default profile: <code>nvidia-bluefield-dpu-mode</code>.</p>
+        <div class="two">
+          <div>
+            <h4>Host owns</h4>
+            <ul>
+              <li>KVM / QEMU / libvirt</li>
+              <li>VF create on the PF (when SR-IOV is host-side)</li>
+              <li>VFIO passthrough into VMs</li>
+              <li>Guest lifecycle and guest SSH</li>
+            </ul>
+          </div>
+          <div>
+            <h4>DPU owns</h4>
+            <ul>
+              <li>Representors</li>
+              <li>OVS / OVS-DOCA</li>
+              <li>Forwarding / flows</li>
+              <li>Offload evidence (<code>ovs-vsctl</code> / <code>dpctl</code> on the DPU)</li>
+            </ul>
+          </div>
+        </div>
+        <p>Use one <code>--config</code>. Omit <code>--run-id</code> to chain onto the latest run, or pin it to keep runs apart.</p>
+        <pre><code>CFG=config/lab-nvidia-vm2vm.yaml
+
+# Read-only
+python tools/labctl.py vm2vm validate-config --config $CFG --json
+python tools/labctl.py vm2vm discover --config $CFG --json
+
+# Destructive stages: plan, inspect JSON, then --apply only if gates pass
+python tools/labctl.py vm2vm prepare-host --config $CFG --dry-run --json
+python tools/labctl.py vm2vm prepare-vfs --config $CFG --dry-run --json
+python tools/labctl.py vm2vm prepare-switchdev --config $CFG --dry-run --json
+python tools/labctl.py vm2vm discover-representors --config $CFG --json
+python tools/labctl.py vm2vm prepare-ovs --config $CFG --dry-run --json
+python tools/labctl.py vm2vm create-vms --config $CFG --dry-run --json
+python tools/labctl.py vm2vm attach-vfs --config $CFG --dry-run --json
+python tools/labctl.py vm2vm configure-forwarding --config $CFG --dry-run --json</code></pre>
+        <p>When (and only when) preflight is ready, dry-run_default is false, and you have reviewed the plan for that stage:</p>
+        <pre><code>python tools/labctl.py vm2vm prepare-vfs --config $CFG --apply --json
+# …repeat --apply per destructive stage, never as a blind batch
+python tools/labctl.py vm2vm configure-forwarding --config $CFG --apply --json</code></pre>
+        <table>
+          <thead><tr><th>#</th><th>Stage</th><th>Purpose</th><th>Destructive?</th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td><code>discover</code></td><td>Inventory via backend + <code>dpu_inventory.py</code></td><td>No</td></tr>
+            <tr><td>2</td><td><code>validate-config</code></td><td>Schema + NVIDIA DPU-mode pinning + DPU OVS probes (plan)</td><td>No</td></tr>
+            <tr><td>3</td><td><code>prepare-host</code></td><td>Tool presence; does not run ansible-playbook</td><td>Yes (packages, conceptually)</td></tr>
+            <tr><td>4</td><td><code>prepare-vfs</code></td><td>SR-IOV numvfs on the selected PF</td><td>Yes</td></tr>
+            <tr><td>5</td><td><code>prepare-switchdev</code></td><td>Host eswitch; skipped when DPU mode has host switchdev off</td><td>Yes</td></tr>
+            <tr><td>6</td><td><code>discover-representors</code></td><td>Map VFs to DPU names such as <code>pf0vf0</code></td><td>No</td></tr>
+            <tr><td>7</td><td><code>prepare-ovs</code></td><td>DPU-side bridge (SSH). Refuses if DPU OVS or required DOCA is missing</td><td>Yes</td></tr>
+            <tr><td>8</td><td><code>create-vms</code></td><td>Libvirt define from the VFIO template</td><td>Yes</td></tr>
+            <tr><td>9</td><td><code>attach-vfs</code></td><td>VFIO attach VF PCI into each VM</td><td>Yes</td></tr>
+            <tr><td>10</td><td><code>configure-forwarding</code></td><td>Single forwarding control point: intent → backend</td><td>Yes</td></tr>
+            <tr><td>11</td><td><code>configure-vm-ips</code></td><td>Guest IPs on the VF under test</td><td>Guest only</td></tr>
+            <tr><td>12</td><td><code>run-traffic</code></td><td>ping / iperf3 between guests</td><td>No</td></tr>
+            <tr><td>13</td><td><code>validate-offload</code></td><td>DPU-side OVS/dpctl probes; offload_state stays unknown unless proven</td><td>No</td></tr>
+            <tr><td>14</td><td><code>collect-evidence</code></td><td>Snapshots for the report</td><td>No</td></tr>
+            <tr><td>15</td><td><code>cleanup</code></td><td>Lab-owned DPU OVS + VMs; not in run-all-safe</td><td>Yes</td></tr>
+          </tbody>
+        </table>
+        <p><code>configure-forwarding</code> requires a prior <code>discover-representors</code> on the same run. Low-confidence names are refused when the profile requires high confidence. <code>--force</code> is invalid here.</p>
+        <p>If apply is blocked, read <code>apply-readiness-gate.json</code> / <code>APPLY_BLOCKED_BY_READINESS_GATE</code>. Typical causes: still on example placeholders, config hash changed after validate-config, no dry-run plan for that stage, missing DPU SSH fields, or <code>--force</code> on forwarding.</p>
+      </div>
+
+      <div class="step" id="how-8">
+        <div class="num">Activity 8 · Prove traffic, then leave the lab clean</div>
+        <h3>Guest path, offload, report, cleanup</h3>
+        <pre><code>python tools/labctl.py vm2vm configure-vm-ips --config $CFG --json
+python tools/labctl.py vm2vm run-traffic --config $CFG --json
+python tools/labctl.py vm2vm validate-offload --config $CFG --json
+python tools/labctl.py vm2vm collect-evidence --config $CFG --json
+python tools/report_generator.py --input-dir tests/results/nvidia-bluefield/&lt;run-id&gt;/
+
+python tools/labctl.py vm2vm cleanup --config $CFG --dry-run --json
+python tools/labctl.py vm2vm cleanup --config $CFG --apply --json</code></pre>
+        <p>Guest SSH uses <code>vms[].management_ip</code> or <code>virsh domifaddr</code>, never the VF test address. Cleanup deletes DPU OVS objects this run marked lab-owned. Unknown bridges return <code>UNKNOWN_BRIDGE_REFUSED</code>. <code>--force</code> may skip the dry-run-plan check for <strong>cleanup only</strong>.</p>
+      </div>
+
+      <div class="step" id="how-9">
+        <div class="num">Activity 9 · Other vendors</div>
+        <h3>Do not start these with NVIDIA OVS</h3>
+        <h4>Intel IPU — network function, not VM-to-VM</h4>
+        <pre><code>python tools/labctl.py intel-nf validate-config --config config/lab-intel-network-function-offload.example.yaml --json
+python tools/labctl.py intel-nf discover --config config/lab-intel-network-function-offload.example.yaml --json
+python tools/labctl.py intel-nf validate-opi --config config/lab-intel-network-function-offload.example.yaml --json
+python tools/labctl.py intel-nf validate-dpu-operator --config config/lab-intel-network-function-offload.example.yaml --json
+python tools/labctl.py intel-nf deploy-network-function-dry-run --config config/lab-intel-network-function-offload.example.yaml --json</code></pre>
+        <p>Stages continue with <code>deploy-network-function</code> (still dry-run unless apply gates pass), placeholder <code>run-traffic</code>, <code>collect-evidence</code>, <code>cleanup</code>. Missing OPI or operator → <code>OPI_ENDPOINT_REQUIRED</code> / <code>DPU_OPERATOR_REQUIRED</code>. Placement must be <code>ipu</code>.</p>
+        <p>Intel <code>labctl vm2vm</code> remains discovery-required for representor/OVS VM-to-VM. Do not assume BlueField semantics.</p>
+
+        <h4>AMD Pensando — discovery first</h4>
+        <pre><code>python tools/preflight_readiness.py --config config/lab-amd-vm2vm.example.yaml --json
+python tools/labctl.py amd-discovery validate-config --config config/lab-amd-vm2vm.example.yaml --json
+python tools/labctl.py amd-discovery discover-device --config config/lab-amd-vm2vm.example.yaml --json
+python tools/labctl.py amd-discovery discover-ionic --config config/lab-amd-vm2vm.example.yaml --json
+python tools/labctl.py amd-discovery discover-rdma --config config/lab-amd-vm2vm.example.yaml --json
+python tools/labctl.py amd-discovery discover-sriov --config config/lab-amd-vm2vm.example.yaml --json
+python tools/labctl.py amd-discovery dry-run-create-vfs --config config/lab-amd-vm2vm.example.yaml --json
+python tools/labctl.py amd-discovery discover-representors --config config/lab-amd-vm2vm.example.yaml --json
+python tools/labctl.py amd-discovery discover-switchdev --config config/lab-amd-vm2vm.example.yaml --json
+python tools/labctl.py amd-discovery discover-ovs-feasibility --config config/lab-amd-vm2vm.example.yaml --json</code></pre>
+        <p>ionic stats are not offload proof. Representors/switchdev/OVS stay undiscovered until observed. Do not set <code>allow_assumed_forwarding: true</code>.</p>
+
+        <h4>Marvell OCTEON — DAO/DPDK gate</h4>
+        <pre><code>python tools/preflight_readiness.py --config config/lab-marvell-vm2vm.example.yaml --json</code></pre>
+        <p>Until DAO, DPDK, hugepages, and a representor source exist, the track is <code>BLOCKED_MISSING_VENDOR_RUNTIME</code> / <code>MARVELL_DAO_MISSING</code>. Host OVS forwarding is refused. Mapping model is DPDK, not NVIDIA portname.</p>
+      </div>
+
+      <div class="step" id="how-10">
+        <div class="num">Activity 10 · Advanced</div>
+        <h3>After the first successful dry-run path</h3>
+
+        <h4>Pin a run id</h4>
+        <p>Use <code>--run-id</code> to resume a specific directory or to compare before/after. Default reuses <code>tests/results/&lt;vendor&gt;/.latest</code>.</p>
+        <pre><code>python tools/labctl.py vm2vm discover --config $CFG --run-id lab-2026-08-16 --json</code></pre>
+
+        <h4>Inspect forwarding intent without calling the backend</h4>
+        <pre><code>python tools/forwarding_intent.py --config $CFG --json</code></pre>
+        <p>NVIDIA DPU-mode intent uses datapath <code>doca</code> when the YAML says OVS-DOCA. A generic <code>system</code> datapath is only for configs that request it (or the advanced host-switchdev profile).</p>
+
+        <h4>NVIDIA host-switchdev (not the default)</h4>
+        <p>Profile <code>nvidia-connectx-host-switchdev</code> puts OVS on the <em>host</em>. Select it explicitly (<code>nvidia.mode: host-switchdev</code>, <code>ovs_location: host</code>, <code>allow_host_ovs_for_forwarding: true</code>). First-run VM-to-VM must not use this. Mixing it with DPU-mode YAML fails validate-config.</p>
+
+        <h4>Verbose plans</h4>
+        <pre><code>python tools/labctl.py vm2vm prepare-ovs --config $CFG --dry-run --json -v</code></pre>
+        <p>Stderr logs planned argv with secrets redacted. Confirm SSH to the DPU, not local <code>add-br</code>.</p>
+
+        <h4>Direct tools (debugging only)</h4>
+        <p>Prefer labctl. These exist for inspection:</p>
+        <pre><code>python tools/topology-discovery/vf_to_representor_map.py --location dpu --config $CFG --json
+python tools/offload-checker/ovs_offload_checker.py --help
+python tools/lab_cleanup.py --config $CFG --dry-run</code></pre>
+
+        <h4>Apply readiness gate failures</h4>
+        <p>Fix the named check; re-run <code>validate-config</code> and a dry-run of the same stage; then <code>--apply</code>. Do not disable <code>safety.require_apply</code> or <code>forbid_management_interface_changes</code> — the loader rejects that.</p>
+
+        <h4>Reports and verdicts</h4>
+        <p>Possible finals include <code>PASS_FUNCTIONAL_ONLY</code>, <code>PASS_OFFLOAD_PROBABLE</code>, <code>PASS_OFFLOAD_CONFIRMED</code>, <code>FAIL_CONNECTIVITY</code>, <code>FAIL_SETUP</code>, <code>INCONCLUSIVE</code>. Confirmed offload needs DPU-side evidence, not host <code>hw-offload=true</code> alone.</p>
+
+        <h4>L2 segment (three VMs)</h4>
+        <p>Modeled as <code>forwarding.type: l2-segment</code> in the intent schema. The current lab YAML is hard-limited to two VMs / two VFs. Do not pretend a 3-VM fabric is executable yet.</p>
+
+        <h4>Adding a backend or running CI locally</h4>
+        <p>Implement <code>VendorBackend</code> under <code>plugins/&lt;name&gt;/</code>, register it, add fixtures and vendor tests, keep unknown as <code>null</code>. See the README “Add a new backend” section and <code>docs/operations/vendor-implementation-roadmap.md</code>.</p>
+      </div>
+
+      <h2 id="safety">Safety rules</h2>
+      <ul>
+        <li>One DPU/IPU at a time.</li>
+        <li>Dry-run first. <code>--dry-run</code> wins over <code>--apply</code>.</li>
+        <li>Never change <code>host.management_interface</code>.</li>
+        <li><code>--force</code> is cleanup-only, never forwarding/OVS setup.</li>
+        <li>Do not enable host OVS forwarding in NVIDIA DPU mode.</li>
+        <li>Do not delete an OVS bridge unless this run marked it lab-owned.</li>
+        <li>Do not claim <code>offloaded:yes</code> from planned commands or host OVS in DPU mode.</li>
+        <li>Do not copy NVIDIA OVS-DOCA, host switchdev, or <code>pf0vfN</code> naming onto Intel, AMD, or Marvell.</li>
+      </ul>
+
+      <h2 id="glossary">Glossary</h2>
+      <table>
+        <thead><tr><th>Term</th><th>Meaning here</th></tr></thead>
+        <tbody>
+          <tr><td>DPU mode</td><td>NVIDIA default: forwarding and representors on BlueField Arm OS</td></tr>
+          <tr><td>Host-switchdev</td><td>Advanced NVIDIA profile: host OVS owns representors</td></tr>
+          <tr><td>Representor</td><td>The netdev that represents a VF in the switch/OVS domain (DPU-side for default NVIDIA)</td></tr>
+          <tr><td>ForwardingIntent</td><td>What the operator asked labctl to connect (endpoints, bridge, datapath, offload request)</td></tr>
+          <tr><td>Apply gate</td><td>Extra checks before a destructive stage may execute</td></tr>
+          <tr><td>Lab-owned</td><td>An OVS object this run created; cleanup may remove only these</td></tr>
+          <tr><td>OVS-DOCA</td><td>NVIDIA datapath_type <code>doca</code>; used only if DPU <code>ovs-vsctl</code> lists it</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="docs">Companion markdown</h2>
+      <p>Short start-here: <code>docs/getting-started.md</code>. This HTML page is the full operator guide. Deeper references:</p>
+      <ul>
+        <li><code>docs/operations/labctl-usage.md</code> — flags and stage chaining</li>
+        <li><code>docs/operations/first-run-nvidia-bluefield-dpu-mode.md</code> — NVIDIA command list</li>
+        <li><code>docs/operations/lab-runbook-vm2vm-single-dpu.md</code> — stage table</li>
+        <li><code>docs/architecture/nvidia-bluefield-control-placement.md</code> — host vs DPU ownership</li>
+        <li><code>config/README-lab-vm2vm.md</code> — YAML fields</li>
+        <li><code>docs/operations/first-run-intel-network-function-offload.md</code></li>
+        <li><code>docs/operations/amd-pensando-readiness.md</code> / <code>docs/operations/marvell-dao-readiness.md</code></li>
+      </ul>
+
+      <footer>
+        ODSE user guide · operator control point is <code>tools/labctl.py</code> · default dry-run · unknown facts stay unknown.
+      </footer>
+    </main>
+  </div>
+</body>
+</html>

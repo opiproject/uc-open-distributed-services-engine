@@ -1,0 +1,72 @@
+---
+# tasks/ensure_service.yml
+#
+# Task 1: ensure OVS is running. Attempts to start/enable the systemd
+# unit (unless ovs_setup_manage_service is false, e.g. when OVS lifecycle
+# is managed some other way, such as inside a container on a DPU), then
+# always performs a functional check via `ovs-vsctl show` regardless of
+# how the service is managed -- that check, not the service module's
+# report, is what actually gates the rest of this role.
+
+- name: Resolve OVS service name for this OS family
+  ansible.builtin.set_fact:
+    ovs_setup_service_name: >-
+      {{ ovs_setup_service_name_by_os_family[ansible_facts.os_family]
+         if ansible_facts.os_family in ovs_setup_service_name_by_os_family
+         else ovs_setup_service_name_by_os_family['default'] }}
+  when: ovs_setup_manage_service | bool
+
+- name: Warn if OS family is not explicitly mapped
+  ansible.builtin.debug:
+    msg: >-
+      OS family '{{ ansible_facts.os_family }}' has no explicit entry in
+      ovs_setup_service_name_by_os_family; using the default service name
+      '{{ ovs_setup_service_name }}', which may be wrong for this distro.
+  when:
+    - ovs_setup_manage_service | bool
+    - ansible_facts.os_family not in ovs_setup_service_name_by_os_family
+
+- name: Ensure the OVS service is enabled and started
+  ansible.builtin.service:
+    name: "{{ ovs_setup_service_name }}"
+    state: started
+    enabled: true
+  register: ovs_setup_service_result
+  failed_when: false
+  when: ovs_setup_manage_service | bool
+
+- name: Warn if the OVS service module reported a problem
+  ansible.builtin.debug:
+    msg: >-
+      attempting to start/enable service '{{ ovs_setup_service_name }}'
+      reported an issue: {{ ovs_setup_service_result.msg }}. Continuing
+      to a functional check ('ovs-vsctl show') to determine whether OVS
+      is actually usable.
+  when:
+    - ovs_setup_manage_service | bool
+    - ovs_setup_service_result.msg is defined
+
+- name: Verify OVS is actually responding (functional check)
+  ansible.builtin.command:
+    cmd: ovs-vsctl show
+  register: ovs_setup_functional_check
+  changed_when: false
+  failed_when: false
+
+- name: Compute a service-name hint for the failure message
+  ansible.builtin.set_fact:
+    ovs_setup_service_hint: >-
+      {{ "and that '" ~ ovs_setup_service_name ~ "' is the correct service name for this distro"
+         if ovs_setup_manage_service | bool
+         else "-- ovs_setup_manage_service is false, so this role did not attempt to start any service unit itself" }}
+  when: ovs_setup_functional_check.rc != 0
+
+- name: Fail if OVS is not responding
+  ansible.builtin.fail:
+    msg: >-
+      Open vSwitch does not appear to be running/responding on this host
+      ('ovs-vsctl show' failed:
+      {{ ovs_setup_functional_check.stderr | default('no output') | trim }}).
+      Verify Open vSwitch is installed (see ansible/roles/host_base)
+      {{ ovs_setup_service_hint }}.
+  when: ovs_setup_functional_check.rc != 0

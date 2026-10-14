@@ -1,0 +1,52 @@
+---
+galaxy_info:
+  role_name: host_base
+  namespace: odse
+  author: Open Distributed Services Engine contributors
+  description: >-
+    Prepares a Linux host for DPU/IPU offload experiments: checks
+    virtualization and IOMMU readiness, and installs baseline, networking,
+    QEMU/KVM+libvirt, Open vSwitch, and OVN packages across multiple Linux
+    distribution families.
+  license: Apache-2.0
+  min_ansible_version: "2.14"
+
+  # Platform coverage reflects what this role's tasks/defaults *attempt* to
+  # support via distro-aware package/service name mappings, not a claim
+  # that every listed platform has been independently tested end-to-end.
+  # See README.md "Distro coverage" for current verification status.
+  platforms:
+    - name: EL
+      versions:
+        - "8"
+        - "9"
+    - name: Fedora
+      versions:
+        - all
+    - name: Ubuntu
+      versions:
+        - all
+    - name: Debian
+      versions:
+        - all
+    - name: openSUSE
+      versions:
+        - all
+
+  galaxy_tags:
+    - networking
+    - virtualization
+    - sriov
+    - dpu
+    - kvm
+    - openvswitch
+    - ovn
+
+# No hard role dependencies: host_base is intended to run first, before
+# ansible/roles/sriov_setup, ansible/roles/switchdev_setup,
+# ansible/roles/ovs_setup, and ansible/roles/ovn_setup, but those roles are
+# not declared as Ansible role dependencies here -- ordering is expressed
+# at the playbook level so each role stays independently runnable and
+# testable. See docs/architecture/overview.md for the intended role
+# sequencing.
+dependencies: []

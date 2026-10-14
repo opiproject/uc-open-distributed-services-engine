@@ -1,0 +1,65 @@
+---
+# tasks/show_eswitch_mode.yml
+#
+# Task 2: Query and display the current devlink eswitch mode for this
+# device, regardless of whether a change is actually needed. This also
+# doubles as a capability probe: if the driver does not support eswitch
+# mode at all, this command fails and the device is marked invalid here
+# rather than later during the actual mode-set attempt.
+
+- name: Show current devlink eswitch mode (raw)
+  ansible.builtin.command:
+    cmd: "devlink dev eswitch show {{ switchdev_setup_devlink_handle }}"
+  register: switchdev_setup_eswitch_show_result
+  changed_when: false
+  failed_when: false
+
+- name: Mark device invalid if eswitch mode cannot be queried
+  ansible.builtin.set_fact:
+    switchdev_setup_device_valid: false
+    switchdev_setup_device_error: >-
+      could not query eswitch mode for
+      '{{ switchdev_setup_devlink_handle }}'
+      ({{ switchdev_setup_eswitch_show_result.stderr | default('no output') | trim }}).
+      This PF/driver may not support devlink eswitch mode switching at
+      all.
+  when: switchdev_setup_eswitch_show_result.rc != 0
+
+- name: Extract current eswitch mode value
+  ansible.builtin.shell:
+    cmd: >
+      devlink dev eswitch show {{ switchdev_setup_devlink_handle }}
+      | grep -oE '(^|[[:space:]])mode [^[:space:]]+'
+      | awk '{print $NF}'
+  register: switchdev_setup_eswitch_mode_extract
+  changed_when: false
+  failed_when: false
+  when: switchdev_setup_device_valid | bool
+
+- name: Record current eswitch mode
+  ansible.builtin.set_fact:
+    switchdev_setup_previous_mode: >-
+      {{ (switchdev_setup_eswitch_mode_extract.stdout | default('') | trim)
+         if (switchdev_setup_eswitch_mode_extract.stdout | default('') | trim | length > 0)
+         else 'unknown' }}
+  when: switchdev_setup_device_valid | bool
+
+- name: Mark device invalid if the current mode could not be parsed
+  ansible.builtin.set_fact:
+    switchdev_setup_device_valid: false
+    switchdev_setup_device_error: >-
+      unable to parse eswitch mode from devlink output for
+      '{{ switchdev_setup_devlink_handle }}':
+      '{{ switchdev_setup_eswitch_show_result.stdout | trim }}'
+  when:
+    - switchdev_setup_device_valid | bool
+    - switchdev_setup_previous_mode == 'unknown'
+
+- name: Report current eswitch mode and requested target
+  ansible.builtin.debug:
+    msg: >-
+      Current eswitch mode for '{{ switchdev_setup_resolved_identifier }}'
+      ({{ switchdev_setup_devlink_handle }}):
+      {{ switchdev_setup_previous_mode }}. Requested target mode:
+      {{ switchdev_setup_target_mode }}.
+  when: switchdev_setup_device_valid | bool

@@ -1,0 +1,53 @@
+# Placeholder Helm values — OVN-Kubernetes on the DPU cluster.
+#
+# Installed against the Kubernetes API that runs on the DPU OS (or the
+# Kind cluster that emulates it). Tenant application pods must not
+# schedule here.
+#
+# Do not helm-install until chart version is pinned. All keys commented.
+#
+# Companion: ../README.md §3 (DPU cluster role), §7–8 (representor/OVS).
+#
+# chart:      <OVN_KUBERNETES_CHART>
+# version:    <OVN_KUBERNETES_CHART_VERSION>
+# namespace:  <OVN_K8S_NAMESPACE>
+# cluster:    dpu
+
+# ---------------------------------------------------------------------------
+# DPU personality: ovn-controller + representor bind, no host CNI ADD
+# for tenant pods.
+# ---------------------------------------------------------------------------
+# dpu:
+#   mode: dpu
+#   # Inverse of host pairing: DPU node -> host kubelet node name.
+#   dpuToHostAnnotation: <DPU_TO_HOST_ANNOTATION_KEY>
+#   taintDpuNodes: true
+#   taintKey: <DPU_TAINT_KEY>                 # e.g. prevent user pods
+
+# ---------------------------------------------------------------------------
+# OVS on the DPU (often pre-provisioned by ansible/roles/ovs_setup).
+# Helm should attach to an existing br-int, not fight Ansible.
+# ---------------------------------------------------------------------------
+# ovs:
+#   manageService: false                      # Ansible owns lifecycle
+#   hwOffload: true                           # other_config:hw-offload
+#   datapathType: system                      # system | netdev | <vendor>
+#   integrationBridge: <OVS_INTEGRATION_BRIDGE>  # typically br-int
+
+# ---------------------------------------------------------------------------
+# Representors: do not list vendor netdev name patterns here.
+# ovnkube should consume ports OVN already sees; mapping is
+# tools/topology-discovery/vf_to_representor_map.py
+# ---------------------------------------------------------------------------
+# representors:
+#   discoverViaDevlink: true
+#   flavour: pcivf
+
+# ovn:
+#   nbAddress: <OVN_NB_ADDRESS>               # same logical DB as host cluster
+#   sbAddress: <OVN_SB_ADDRESS>
+#   chassisName: <DPU_CHASSIS_NAME>           # must be unique per DPU node
+
+# k8sAPIServer: <DPU_K8S_APISERVER>
+
+{}

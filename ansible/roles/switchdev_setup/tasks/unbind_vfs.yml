@@ -1,0 +1,82 @@
+---
+# tasks/unbind_vfs.yml
+#
+# Task 3 (optional, when require_vfs_unbound: true): unbind every VF
+# driver for this PF before attempting the eswitch mode change. Some
+# drivers/firmware require this; this role does not assume which do, so
+# it is entirely opt-in via require_vfs_unbound.
+#
+# IMPORTANT: this role does NOT automatically rebind VFs afterwards. See
+# README.md "Known limitations".
+
+- name: List VF PCI addresses for this device (for optional unbind)
+  ansible.builtin.shell:
+    cmd: |
+      for l in /sys/bus/pci/devices/{{ switchdev_setup_pci_address }}/virtfn*; do
+        [ -e "$l" ] || continue
+        readlink -f "$l" | xargs -n1 basename
+      done
+  register: switchdev_setup_vf_list_result
+  changed_when: false
+  failed_when: false
+
+- name: Record VF PCI address list
+  ansible.builtin.set_fact:
+    switchdev_setup_vf_pci_addresses: >-
+      {{ (switchdev_setup_vf_list_result.stdout | default('')).split('\n') | select('string') | map('trim') | reject('equalto', '') | list }}
+
+- name: No VFs present to unbind
+  ansible.builtin.debug:
+    msg: >-
+      require_vfs_unbound is true for
+      '{{ switchdev_setup_resolved_identifier }}', but no VFs currently
+      exist on this PF -- nothing to unbind.
+  when: switchdev_setup_vf_pci_addresses | length == 0
+
+- name: Unbind each VF driver
+  ansible.builtin.shell:
+    cmd: |
+      devpath="/sys/bus/pci/devices/{{ item }}"
+      if [ -L "$devpath/driver" ]; then
+        echo "{{ item }}" > "$devpath/driver/unbind"
+      fi
+  register: switchdev_setup_vf_unbind_result
+  changed_when: switchdev_setup_vf_unbind_result.rc == 0
+  failed_when: false
+  loop: "{{ switchdev_setup_vf_pci_addresses }}"
+  when: switchdev_setup_vf_pci_addresses | length > 0
+
+- name: Warn about any VFs that failed to unbind
+  ansible.builtin.debug:
+    msg: >-
+      failed to unbind driver for VF(s):
+      {{ switchdev_setup_vf_unbind_result.results
+         | default([])
+         | selectattr('rc', 'defined')
+         | rejectattr('rc', 'equalto', 0)
+         | map(attribute='item')
+         | list }}
+  when: >-
+    switchdev_setup_vf_unbind_result.results
+    | default([])
+    | selectattr('rc', 'defined')
+    | rejectattr('rc', 'equalto', 0)
+    | list
+    | length > 0
+
+- name: Record that VFs were unbound for this device
+  ansible.builtin.set_fact:
+    switchdev_setup_vfs_unbound: true
+  when: switchdev_setup_vf_pci_addresses | length > 0
+
+- name: Note that unbound VFs are not automatically rebound by this role
+  ansible.builtin.debug:
+    msg: >-
+      {{ switchdev_setup_vf_pci_addresses | length }} VF(s) were unbound
+      for '{{ switchdev_setup_resolved_identifier }}'. This role does not
+      automatically rebind them -- rebind manually, via a vendor-specific
+      hook (switchdev_setup_vendor_hooks.*.post_mode_change_commands), or
+      via a downstream role (e.g. ansible/roles/sriov_setup with
+      autoload_driver/vf_driver) once the eswitch mode change below
+      completes.
+  when: switchdev_setup_vf_pci_addresses | length > 0

@@ -1,0 +1,47 @@
+---
+# tasks/checks_virtualization.yml
+#
+# Conservative, read-only checks for CPU virtualization extension support
+# (Intel VT-x/"vmx" or AMD-V/"svm") and /dev/kvm presence. This never
+# fails the play by default -- see host_base_fail_on_missing_virtualization.
+
+- name: Check CPU virtualization extension flags (vmx/svm) in /proc/cpuinfo
+  ansible.builtin.shell:
+    cmd: "grep -Eqo '(vmx|svm)' /proc/cpuinfo"
+  register: host_base_cpu_virt_check
+  changed_when: false
+  failed_when: false
+
+- name: Check /dev/kvm device presence
+  ansible.builtin.stat:
+    path: /dev/kvm
+  register: host_base_dev_kvm_stat
+
+- name: Set overall virtualization support fact
+  ansible.builtin.set_fact:
+    host_base_virtualization_supported: >-
+      {{ (host_base_cpu_virt_check.rc == 0) and (host_base_dev_kvm_stat.stat.exists | default(false)) }}
+
+- name: Report virtualization support status
+  ansible.builtin.debug:
+    msg: >-
+      Virtualization support check on {{ inventory_hostname }}:
+      cpu_flags_present={{ host_base_cpu_virt_check.rc == 0 }},
+      dev_kvm_present={{ host_base_dev_kvm_stat.stat.exists | default(false) }},
+      overall_supported={{ host_base_virtualization_supported }}.
+      If overall_supported is false, verify that virtualization is enabled in
+      firmware/BIOS (VT-x/AMD-V) and that the kvm_intel/kvm_amd kernel module
+      is loaded.
+
+- name: Fail when virtualization support is required but missing
+  ansible.builtin.assert:
+    that:
+      - host_base_virtualization_supported
+    fail_msg: >-
+      CPU virtualization extensions (vmx/svm) or /dev/kvm were not detected on
+      this host. KVM/QEMU workloads will not function here. Enable
+      virtualization in firmware/BIOS and ensure the kvm_intel/kvm_amd module
+      is loaded, or set host_base_fail_on_missing_virtualization: false to
+      only warn instead of failing the play.
+    success_msg: "Virtualization support detected; continuing."
+  when: host_base_fail_on_missing_virtualization | bool

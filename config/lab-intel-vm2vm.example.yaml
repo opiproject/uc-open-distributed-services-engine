@@ -1,0 +1,263 @@
+# ODSE VM-to-VM single-DPU lab EXAMPLE — Intel IPU.
+# Copy to config/lab-intel-vm2vm.yaml (gitignored) and replace every
+# placeholder from real discovery output. Do not treat any name, IP, or
+# PCI address below as real hardware.
+#
+# IPs use documentation ranges: TEST-NET-1 (192.0.2.0/24) for
+# management/DPU addresses, TEST-NET-2 (198.51.100.0/24) for guest VM
+# addresses. Hostnames use .example.invalid.
+#
+# Intel's story starts with discovery, Redfish reachability, and an
+# OPI/DPU-Operator style control path rather than an OVS representor
+# model (docs/vendor-readiness/intel-ipu-e2100.md). preferred_datapath is
+# 'discovery' here deliberately: this example does not assume OVS
+# representors exist. configure_forwarding() on the Intel backend is a
+# staged skeleton and is expected to return discovery-required or
+# error=OPI_ENDPOINT_REQUIRED until an OPI endpoint is confirmed.
+
+schema: odse-lab-vm2vm/v1alpha1
+
+host:
+  name: <HOST_NAME>
+  management_interface: <MGMT_IFACE>
+  ssh_user: <HOST_SSH_USER>
+  preserve_interfaces: []
+  os_family: RedHat
+
+vendor:
+  type: intel-ipu
+  backend_module: null
+  profile: intel-ipu-opi-dpu-operator
+
+intel:
+  mode: opi-dpu-operator
+  vm_to_vm_forwarding_default: discovery-required
+  require_opi: true
+  require_dpu_operator: false
+  require_redfish: false
+  allow_ovs_assumption: false
+  # control_plane: which of three alternate, independent P4Runtime/IPDK
+  # control paths configure-forwarding should use once capability is
+  # proven -- none is a fallback of another (see
+  # docs/vendor-readiness/intel-ipu-ovs-p4.md):
+  #   null (default) -> auto: whichever of opi/p4/ovs proves capability
+  #                      first (see plugins/intel_ipu/vm_to_vm_capability.py)
+  #   opi  -> OPI/DPU Operator style API (opi:/dpu_operator: below)
+  #   p4   -> raw P4Runtime: labctl shells p4rt-ctl over SSH to the ACC
+  #           and writes exact table/action entries from p4.forwarding_entries
+  #           below (see docs/vendor-readiness/intel-ipu-p4-ipdk.md)
+  #   ovs  -> OVS-as-P4Runtime-client: labctl uses ordinary ovs-vsctl/
+  #           ovs-ofctl over SSH to the ACC against the *same* infrap4d
+  #           instance p4 mode=cli talks to directly -- this is the path
+  #           https://github.com/ipdk-io/ipu-playbook's ovs_offload_lnw.py
+  #           uses on real E2100 hardware. It is NOT a separate hardware
+  #           mechanism from p4 above (both are P4Runtime clients of the
+  #           same infrap4d); choosing ovs instead of p4 only changes
+  #           which front-end you use, and for simple bidirectional L2
+  #           bridging it needs no explicit table/flow config at all --
+  #           ovs-vswitchd's own dynamic MAC learning programs it via
+  #           P4Runtime once each forwarding.endpoints[].representor is
+  #           attached to ovs.bridge below.
+  control_plane: null
+
+opi:
+  endpoint: null
+  auth_mode: mock
+  verify_tls: true
+
+dpu_operator:
+  kubeconfig: null
+  namespace: null
+  require_installed: false
+
+# p4: — P4Runtime/IPDK control path (plugins/intel_ipu/p4runtime.py). This
+# is an alternate, independent control plane to opi:/dpu_operator: above,
+# not a fallback of it or a prerequisite for it — IPDK's `infrap4d`
+# P4Runtime daemon predates the OpenShift DPU Operator and does not require
+# it. Configuring either opi.endpoint or p4.endpoint is enough to move past
+# "no control-plane endpoint at all" in capability detection; either one
+# (plus VF/endpoint-mapping proof) can independently satisfy
+# check_vm_to_vm_forwarding_capability(). See
+# docs/vendor-readiness/intel-ipu-p4-ipdk.md.
+#
+# mode: cli shells the real `p4rt-ctl` utility over SSH to the ACC (same
+# mechanism https://github.com/ipdk-io/ipu-playbook's ovs_offload_lnw.py
+# uses on real E2100 hardware) using the SSH target in dpu: below (the
+# ACC is Intel's analog of BlueField's Arm side, so it reuses that same
+# block rather than a separate one) and is gated by remote_execution.
+# dry_run_default the same way NVIDIA's DPU-mode SSH probing is.
+p4:
+  mode: mock              # mock | cli (p4rt-ctl over SSH) | grpc (placeholder; no RPC sent)
+  endpoint: null          # informational only for mode=cli; the real infrap4d gRPC endpoint, e.g. <acc-ip>:9339
+  device_id: null         # p4rt-ctl SWITCH name, e.g. br0 (defaults to br0 if null)
+  # Real artifact set for the fxp-net_linux-networking P4 package (see
+  # ipdk-io/ipu-playbook's ovs_offload README and
+  # docs/vendor-readiness/intel-ipu-p4-ipdk.md). Do not commit any of
+  # these files -- they are per-lab, per-SKU, and gitignored locally.
+  artifacts:
+    p4info_path: null      # p4Info.txt
+    pipeline_binary_path: null  # compiled *.pb.bin / *.pkg for `p4rt-ctl set-pipe`
+    tdi_path: null          # tdi.json
+    context_path: null      # context.json
+    entries_path: null      # entries.json (optional canned entries)
+  # Representor mapping convention from ipdk-io/ipu-playbook's
+  # ovs_offload_lnw.py config.yaml: index-paired arrays,
+  # vf_interfaces[i] <-> acc_pr_interfaces[i]. Optional; only used to
+  # cross-check/report discovery output, never invented.
+  vf_interfaces: []
+  acc_pr_interfaces: []
+  # forwarding_entries: — REQUIRED before `configure-forwarding --apply`
+  # will actually submit anything for the P4 control plane. Each entry
+  # maps one forwarding: endpoints[].vf_index to a real p4rt-ctl
+  # add-entry call: {vf_index, table, flow, switch (optional, defaults
+  # to device_id/br0)}. `flow` is the exact p4rt-ctl FLOW string for
+  # YOUR compiled P4 program's real table/action names (e.g.
+  # "hdr.ipv4.dst_addr=198.51.100.11,action=ingress.send(1)") -- this
+  # repo does not build FLOW strings from a DSL and will refuse to
+  # submit (not guess) for any endpoint missing an entry here. See
+  # docs/vendor-readiness/intel-ipu-p4-ipdk.md.
+  forwarding_entries: []
+  # - vf_index: 0
+  #   table: <YOUR_P4_TABLE_NAME>
+  #   flow: <YOUR_REAL_P4RT_CTL_FLOW_STRING>
+  # - vf_index: 1
+  #   table: <YOUR_P4_TABLE_NAME>
+  #   flow: <YOUR_REAL_P4RT_CTL_FLOW_STRING>
+
+ipu:
+  management_ip: 192.0.2.20
+  redfish_endpoint: null
+  firmware_required: null
+
+dpu:
+  pf_name: <IPU_PF_NETDEV>
+  pf_pci: <IPU_PCI_ADDRESS>
+  uplink_name: null
+  uplink_pci: null
+  # management_ip/ssh_* below are also the ACC SSH target used by
+  # p4.mode=cli (plugins/intel_ipu/p4runtime.py: RemoteCommandRunner +
+  # ssh_params()) -- the ACC is Intel's analog of BlueField's Arm side,
+  # so it reuses the same field shape NVIDIA's DPU-mode SSH probing uses
+  # rather than a separate p4-specific SSH block.
+  management_ip: 192.0.2.20
+  ssh_user: <ACC_SSH_USER>
+  ssh_key_path: null
+  ssh_port: 22
+  sudo: true
+  command_timeout_seconds: 30
+  num_vfs: 2
+  enable_switchdev: false
+  enable_ovs_hw_offload: false
+  preferred_datapath: discovery
+  opi_endpoint: null
+  redfish_endpoint: null
+
+# ovs: — only used when intel.control_plane: ovs (above). bridge is the
+# name labctl creates on the ACC via ovs-vsctl over SSH (plugins/
+# intel_ipu/ovs_p4.py); datapath_type/fail_mode/ports are informational
+# only today (Intel's OVS build is the IPDK "enhanced"/P4Runtime-aware
+# ovs-vswitchd, not a datapath_type choice the way NVIDIA's OVS-DOCA is).
+ovs:
+  bridge: br-int
+  datapath_type: null
+  fail_mode: null
+  ports: []
+
+# remote_execution gates whether p4.mode=cli actually SSHes to the ACC
+# (dpu.management_ip above) and runs p4rt-ctl, or only plans/logs the
+# command it would have run. Same dual-gate convention as NVIDIA's
+# DPU-mode SSH probing: labctl --dry-run always wins regardless of this;
+# with --apply, this file's dry_run_default still has to be flipped to
+# false locally before any SSH command is actually sent. See
+# docs/operations/dpu-remote-execution.md.
+remote_execution:
+  enabled: true
+  target: acc
+  dry_run_default: true
+
+vms:
+  - name: odse-vm2vm-vm1
+    image: <VM_IMAGE>
+    memory_mb: 2048
+    vcpus: 2
+    vf_index: 0
+    vf_pci: null
+    mac: null
+    ip_cidr: 198.51.100.31/24
+    gateway: null
+    ssh_user: <VM_SSH_USER>
+    management_ip: null   # optional; if null, labctl falls back to `virsh domifaddr odse-vm2vm-vm1`
+    ssh_key_path: null    # optional; set if ssh's default identity isn't the key authorized into this guest
+  - name: odse-vm2vm-vm2
+    image: <VM_IMAGE>
+    memory_mb: 2048
+    vcpus: 2
+    vf_index: 1
+    vf_pci: null
+    mac: null
+    ip_cidr: 198.51.100.32/24
+    gateway: null
+    ssh_user: <VM_SSH_USER>
+    management_ip: null   # optional; if null, labctl falls back to `virsh domifaddr odse-vm2vm-vm2`
+    ssh_key_path: null    # optional; set if ssh's default identity isn't the key authorized into this guest
+
+traffic:
+  type: "ping and iperf3"
+  duration_seconds: 30
+  iperf_parallel_streams: 4
+  packet_size: null
+
+validation:
+  collect_ovs_flows: false
+  collect_tc_filters: false
+  collect_ethtool_stats: true
+  collect_cpu_stats: true
+  collect_vendor_telemetry: true
+
+safety:
+  dry_run_default: true
+  require_apply: true
+  forbid_management_interface_changes: true
+  cleanup_on_failure: false
+
+# forwarding: may return discovery-required depending on backend
+# capability. The Intel backend converts this intent into a placeholder
+# object matching whichever control plane proved capability (opi/p4/ovs,
+# see intel.control_plane above) and requires that control plane's
+# endpoint/config to be reachable before it can attempt anything beyond
+# discovery-required.
+#
+# endpoints[].representor: only required when intel.control_plane: ovs --
+# the real ACC port representor netdev name for that VF (from a proven
+# `discover-representors` run, or ipdk-io/ipu-playbook's config.yaml
+# vf_interfaces[i]/acc_pr_interfaces[i] convention -- see p4.vf_interfaces/
+# acc_pr_interfaces above). Never guessed from vf_index; configure-forwarding
+# --apply refuses per-endpoint if this is missing.
+forwarding:
+  name: odse-vm2vm-intel
+  type: l2-vm-to-vm
+  mode: bridge
+  endpoints:
+    - name: vm1-endpoint
+      vm: odse-vm2vm-vm1
+      vf_index: 0
+      vf_pci: null
+      representor: null   # e.g. <ACC_PR_INTERFACE_FOR_VF0> when intel.control_plane: ovs
+      mac: null
+      ip_cidr: 198.51.100.31/24
+    - name: vm2-endpoint
+      vm: odse-vm2vm-vm2
+      vf_index: 1
+      vf_pci: null
+      representor: null   # e.g. <ACC_PR_INTERFACE_FOR_VF1> when intel.control_plane: ovs
+      mac: null
+      ip_cidr: 198.51.100.32/24
+  policy:
+    action: allow
+    bidirectional: true
+  offload:
+    requested: false
+    fallback_to_software: true
+    require_confirmed_offload: false
+  explicit_flows:
+    enabled: false

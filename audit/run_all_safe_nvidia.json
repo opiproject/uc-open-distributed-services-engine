@@ -1,0 +1,1980 @@
+{
+  "cli": "odse-labctl/v1alpha1",
+  "run_id": "20260816T040642Z",
+  "stage": "run-all-safe",
+  "stages": [
+    {
+      "apply": false,
+      "dry_run": true,
+      "result": {
+        "backend_result": {
+          "capabilities": {
+            "notes": "ovs-vsctl absent or empty",
+            "opi_native": null,
+            "ovs_hw_offload": null,
+            "sriov": null,
+            "switchdev": null,
+            "vdpa": null,
+            "vendor": "nvidia"
+          },
+          "commands": [
+            {
+              "argv": [
+                "lspci",
+                "-nn"
+              ],
+              "dry_run": false,
+              "executed": false,
+              "reason": "command not found",
+              "returncode": null,
+              "shell": false,
+              "stderr": null,
+              "stdout": null,
+              "timed_out": false
+            },
+            {
+              "argv": [
+                "devlink",
+                "dev",
+                "show"
+              ],
+              "dry_run": false,
+              "executed": false,
+              "reason": "command not found",
+              "returncode": null,
+              "shell": false,
+              "stderr": null,
+              "stdout": null,
+              "timed_out": false
+            },
+            {
+              "argv": [
+                "devlink",
+                "port",
+                "show"
+              ],
+              "dry_run": false,
+              "executed": false,
+              "reason": "command not found",
+              "returncode": null,
+              "shell": false,
+              "stderr": null,
+              "stdout": null,
+              "timed_out": false
+            },
+            {
+              "argv": [
+                "ip",
+                "-d",
+                "link",
+                "show"
+              ],
+              "dry_run": false,
+              "executed": false,
+              "reason": "command not found",
+              "returncode": null,
+              "shell": false,
+              "stderr": null,
+              "stdout": null,
+              "timed_out": false
+            },
+            {
+              "argv": [
+                "ovs-vsctl",
+                "show"
+              ],
+              "dry_run": true,
+              "executed": false,
+              "reason": "command not found",
+              "returncode": null,
+              "shell": false,
+              "stderr": null,
+              "stdout": null,
+              "timed_out": false
+            }
+          ],
+          "destructive": false,
+          "details": {
+            "devlink_devices": [],
+            "mlx5_interfaces": [],
+            "ovs_present": false
+          },
+          "devices": [],
+          "executed": true,
+          "flows": [],
+          "message": "no NVIDIA/Mellanox/mlx5/BlueField/ConnectX hints in collected output",
+          "operation": "discover",
+          "physical_functions": [],
+          "representors": [],
+          "status": "skipped",
+          "telemetry": [],
+          "vendor": "nvidia",
+          "virtual_functions": []
+        },
+        "dpu_inventory": {
+          "devlink_devices": {
+            "available": false,
+            "devices": [],
+            "error": "'devlink' not found on PATH",
+            "source_command": "devlink dev show"
+          },
+          "devlink_ports": {
+            "available": false,
+            "error": "'devlink' not found on PATH",
+            "ports": [],
+            "source_command": "devlink port show"
+          },
+          "host": {
+            "hostname": "SandboxHost-639224489449796250",
+            "machine": "x86_64",
+            "platform": "Linux-6.1.146.1-microsoft-standard-x86_64-with-glibc2.38",
+            "release": "6.1.146.1-microsoft-standard",
+            "system": "Linux"
+          },
+          "netdevs": {
+            "available": false,
+            "error": "'ip' not found on PATH",
+            "interfaces": [
+              {
+                "ethtool_info": null,
+                "ethtool_info_error": "'ethtool' not found on PATH",
+                "ethtool_stats": null,
+                "ethtool_stats_error": "skipped: not a probable PF (no sriov_numvfs in sysfs)",
+                "ip_link": null,
+                "is_probable_pf": false,
+                "name": "eth0"
+              }
+            ],
+            "source_command": "ip -d link show"
+          },
+          "ovs": {
+            "dpctl_show": {
+              "available": false,
+              "error": "'ovs-vsctl' not found on PATH (OVS not detected)",
+              "raw": null
+            },
+            "installed": false,
+            "vsctl_show": {
+              "available": false,
+              "error": "'ovs-vsctl' not found on PATH (OVS not detected)",
+              "raw": null
+            }
+          },
+          "pci_devices": {
+            "available": false,
+            "devices": [],
+            "error": "'lspci' not found on PATH",
+            "source_command": "lspci -nn"
+          },
+          "schema_version": "odse-inventory/v1alpha1",
+          "timestamp": "2026-08-16T04:07:25.164484+00:00",
+          "vendor_hints": []
+        },
+        "dpu_inventory_error": null,
+        "stage": "discover"
+      },
+      "run_id": "20260816T040642Z",
+      "stage": "discover"
+    },
+    {
+      "apply": false,
+      "dry_run": true,
+      "result": {
+        "config": {
+          "dry_run_default": true,
+          "host_name": "<HOST_NAME>",
+          "management_interface": "<MGMT_IFACE>",
+          "num_vfs": 2,
+          "pf_name": "<PF_NAME>",
+          "pf_pci": "<PF_PCI>",
+          "preferred_datapath": "doca",
+          "schema": "odse-lab-vm2vm/v1alpha1",
+          "vendor_type": "nvidia-bluefield",
+          "vm_names": [
+            "odse-vm2vm-vm1",
+            "odse-vm2vm-vm2"
+          ]
+        },
+        "dpu_ovs_validation": {
+          "capabilities": null,
+          "commands": [
+            {
+              "argv": [
+                "ssh",
+                "-o",
+                "BatchMode=yes",
+                "-o",
+                "StrictHostKeyChecking=accept-new",
+                "-p",
+                "22",
+                "<DPU_SSH_USER>@192.0.2.10",
+                "--",
+                "sudo",
+                "-n",
+                "command",
+                "-v",
+                "ovs-vsctl"
+              ],
+              "dry_run": true,
+              "executed": false,
+              "reason": "dpu ovs validate",
+              "returncode": null,
+              "shell": false,
+              "stderr": null,
+              "stdout": null,
+              "timed_out": false
+            },
+            {
+              "argv": [
+                "ssh",
+                "-o",
+                "BatchMode=yes",
+                "-o",
+                "StrictHostKeyChecking=accept-new",
+                "-p",
+                "22",
+                "<DPU_SSH_USER>@192.0.2.10",
+                "--",
+                "sudo",
+                "-n",
+                "command",
+                "-v",
+                "ovs-appctl"
+              ],
+              "dry_run": true,
+              "executed": false,
+              "reason": "dpu ovs validate",
+              "returncode": null,
+              "shell": false,
+              "stderr": null,
+              "stdout": null,
+              "timed_out": false
+            },
+            {
+              "argv": [
+                "ssh",
+                "-o",
+                "BatchMode=yes",
+                "-o",
+                "StrictHostKeyChecking=accept-new",
+                "-p",
+                "22",
+                "<DPU_SSH_USER>@192.0.2.10",
+                "--",
+                "sudo",
+                "-n",
+                "systemctl",
+                "is-active",
+                "openvswitch"
+              ],
+              "dry_run": true,
+              "executed": false,
+              "reason": "dpu ovs validate",
+              "returncode": null,
+              "shell": false,
+              "stderr": null,
+              "stdout": null,
+              "timed_out": false
+            },
+            {
+              "argv": [
+                "ssh",
+                "-o",
+                "BatchMode=yes",
+                "-o",
+                "StrictHostKeyChecking=accept-new",
+                "-p",
+                "22",
+                "<DPU_SSH_USER>@192.0.2.10",
+                "--",
+                "sudo",
+                "-n",
+                "ovs-vsctl",
+                "get",
+                "Open_vSwitch",
+                ".",
+                "datapath_types"
+              ],
+              "dry_run": true,
+              "executed": false,
+              "reason": "dpu ovs validate",
+              "returncode": null,
+              "shell": false,
+              "stderr": null,
+              "stdout": null,
+              "timed_out": false
+            },
+            {
+              "argv": [
+                "ssh",
+                "-o",
+                "BatchMode=yes",
+                "-o",
+                "StrictHostKeyChecking=accept-new",
+                "-p",
+                "22",
+                "<DPU_SSH_USER>@192.0.2.10",
+                "--",
+                "sudo",
+                "-n",
+                "ovs-vsctl",
+                "show"
+              ],
+              "dry_run": true,
+              "executed": false,
+              "reason": "dpu ovs validate",
+              "returncode": null,
+              "shell": false,
+              "stderr": null,
+              "stdout": null,
+              "timed_out": false
+            },
+            {
+              "argv": [
+                "ssh",
+                "-o",
+                "BatchMode=yes",
+                "-o",
+                "StrictHostKeyChecking=accept-new",
+                "-p",
+                "22",
+                "<DPU_SSH_USER>@192.0.2.10",
+                "--",
+                "sudo",
+                "-n",
+                "ovs-vsctl",
+                "get",
+                "Open_vSwitch",
+                ".",
+                "other_config"
+              ],
+              "dry_run": true,
+              "executed": false,
+              "reason": "dpu ovs validate",
+              "returncode": null,
+              "shell": false,
+              "stderr": null,
+              "stdout": null,
+              "timed_out": false
+            },
+            {
+              "argv": [
+                "ovs-vsctl",
+                "--may-exist",
+                "add-br",
+                "br-int"
+              ],
+              "dry_run": true,
+              "executed": false,
+              "reason": "create_ovs_bridge",
+              "returncode": null,
+              "shell": false,
+              "stderr": null,
+              "stdout": null,
+              "timed_out": false
+            },
+            {
+              "argv": [
+                "ovs-vsctl",
+                "set",
+                "bridge",
+                "br-int",
+                "datapath_type=doca"
+              ],
+              "dry_run": true,
+              "executed": false,
+              "reason": "create_ovs_bridge",
+              "returncode": null,
+              "shell": false,
+              "stderr": null,
+              "stdout": null,
+              "timed_out": false
+            }
+          ],
+          "destructive": false,
+          "details": {
+            "allow_doca_fallback": false,
+            "bridge_plan": "bridge br-int datapath_type=doca dry_run=True (system=kernel OVS-TC default)",
+            "dpu_ovs_status": "OVS_VALIDATION_PLANNED",
+            "dry_run": true,
+            "want_doca": true
+          },
+          "devices": [],
+          "executed": false,
+          "flows": [],
+          "message": "DPU OVS validation planned (dry-run SSH; not proven running)",
+          "operation": "validate_dpu_ovs_environment",
+          "physical_functions": [],
+          "representors": [],
+          "status": "ok",
+          "telemetry": [],
+          "vendor": "nvidia",
+          "virtual_functions": []
+        },
+        "issues": [],
+        "preserved_interfaces": [
+          "<MGMT_IFACE>"
+        ],
+        "stage": "validate-config",
+        "valid": true
+      },
+      "run_id": "20260816T040642Z",
+      "stage": "validate-config"
+    },
+    {
+      "apply": false,
+      "dry_run": true,
+      "result": {
+        "dry_run": true,
+        "message": "missing tools on this host: qemu-img, virsh, virt-install, ping, iperf3 -- see ansible/roles/host_base",
+        "stage": "prepare-host",
+        "tools": {
+          "iperf3": false,
+          "ping": false,
+          "qemu-img": false,
+          "ssh": true,
+          "virsh": false,
+          "virt-install": false
+        }
+      },
+      "run_id": "20260816T040642Z",
+      "stage": "prepare-host"
+    },
+    {
+      "apply": false,
+      "dry_run": true,
+      "result": {
+        "apply": false,
+        "backend_result": {
+          "capabilities": null,
+          "commands": [
+            {
+              "argv": [
+                "sh",
+                "-c",
+                "echo <N> > /sys/class/net/<PF>/device/sriov_numvfs"
+              ],
+              "dry_run": true,
+              "executed": false,
+              "reason": "destructive sysfs write \u2014 not executed",
+              "returncode": null,
+              "shell": false,
+              "stderr": null,
+              "stdout": null,
+              "timed_out": false
+            }
+          ],
+          "destructive": true,
+          "details": {},
+          "devices": [],
+          "executed": false,
+          "flows": [],
+          "message": "TODO: ansible/roles/sriov_setup; refuse unsafe numvfs. pf=<PF_NAME> numvfs=2",
+          "operation": "configure_sriov",
+          "physical_functions": [],
+          "representors": [],
+          "status": "not_implemented",
+          "telemetry": [],
+          "vendor": "nvidia",
+          "virtual_functions": []
+        },
+        "dry_run": true,
+        "num_vfs": 2,
+        "pf_name": "<PF_NAME>",
+        "pf_pci": "<PF_PCI>",
+        "stage": "prepare-vfs"
+      },
+      "run_id": "20260816T040642Z",
+      "stage": "prepare-vfs"
+    },
+    {
+      "apply": false,
+      "dry_run": true,
+      "result": {
+        "message": "dpu.enable_switchdev is false; not requesting switchdev mode",
+        "skipped": true,
+        "stage": "prepare-switchdev"
+      },
+      "run_id": "20260816T040642Z",
+      "stage": "prepare-switchdev"
+    },
+    {
+      "apply": false,
+      "dry_run": true,
+      "result": {
+        "backend_result": {
+          "capabilities": null,
+          "commands": [
+            {
+              "argv": [
+                "ssh",
+                "-o",
+                "BatchMode=yes",
+                "-o",
+                "StrictHostKeyChecking=accept-new",
+                "-p",
+                "22",
+                "<DPU_SSH_USER>@192.0.2.10",
+                "--",
+                "sudo",
+                "-n",
+                "ip",
+                "-d",
+                "link",
+                "show"
+              ],
+              "dry_run": true,
+              "executed": false,
+              "reason": "dpu representor discovery",
+              "returncode": null,
+              "shell": false,
+              "stderr": null,
+              "stdout": null,
+              "timed_out": false
+            },
+            {
+              "argv": [
+                "ssh",
+                "-o",
+                "BatchMode=yes",
+                "-o",
+                "StrictHostKeyChecking=accept-new",
+                "-p",
+                "22",
+                "<DPU_SSH_USER>@192.0.2.10",
+                "--",
+                "sudo",
+                "-n",
+                "devlink",
+                "port",
+                "show"
+              ],
+              "dry_run": true,
+              "executed": false,
+              "reason": "dpu representor discovery",
+              "returncode": null,
+              "shell": false,
+              "stderr": null,
+              "stdout": null,
+              "timed_out": false
+            },
+            {
+              "argv": [
+                "ssh",
+                "-o",
+                "BatchMode=yes",
+                "-o",
+                "StrictHostKeyChecking=accept-new",
+                "-p",
+                "22",
+                "<DPU_SSH_USER>@192.0.2.10",
+                "--",
+                "sudo",
+                "-n",
+                "ovs-vsctl",
+                "show"
+              ],
+              "dry_run": true,
+              "executed": false,
+              "reason": "dpu representor discovery",
+              "returncode": null,
+              "shell": false,
+              "stderr": null,
+              "stdout": null,
+              "timed_out": false
+            }
+          ],
+          "destructive": false,
+          "details": {
+            "host_mapping": false,
+            "location": "dpu",
+            "pf": "<PF_NAME>",
+            "strategy": "nvidia-portname"
+          },
+          "devices": [],
+          "executed": false,
+          "flows": [],
+          "message": "DPU-side representor probes planned via RemoteCommandRunner (not host OVS)",
+          "operation": "discover_representors",
+          "physical_functions": [],
+          "representors": [],
+          "status": "ok",
+          "telemetry": [],
+          "vendor": "nvidia",
+          "virtual_functions": []
+        },
+        "location": "dpu",
+        "require_high_confidence": true,
+        "stage": "discover-representors",
+        "strategy": "nvidia-portname",
+        "vf_to_representor_map": {
+          "commands": [
+            {
+              "argv": [
+                "ssh",
+                "-o",
+                "BatchMode=yes",
+                "-o",
+                "StrictHostKeyChecking=accept-new",
+                "-p",
+                "22",
+                "<DPU_SSH_USER>@192.0.2.10",
+                "--",
+                "sudo",
+                "-n",
+                "ip",
+                "-d",
+                "link",
+                "show"
+              ],
+              "dry_run": true,
+              "executed": false,
+              "reason": "dpu representor mapping: ip -d link show",
+              "returncode": null
+            },
+            {
+              "argv": [
+                "ssh",
+                "-o",
+                "BatchMode=yes",
+                "-o",
+                "StrictHostKeyChecking=accept-new",
+                "-p",
+                "22",
+                "<DPU_SSH_USER>@192.0.2.10",
+                "--",
+                "sudo",
+                "-n",
+                "devlink",
+                "port",
+                "show"
+              ],
+              "dry_run": true,
+              "executed": false,
+              "reason": "dpu representor mapping: devlink port show",
+              "returncode": null
+            },
+            {
+              "argv": [
+                "ssh",
+                "-o",
+                "BatchMode=yes",
+                "-o",
+                "StrictHostKeyChecking=accept-new",
+                "-p",
+                "22",
+                "<DPU_SSH_USER>@192.0.2.10",
+                "--",
+                "sudo",
+                "-n",
+                "ovs-vsctl",
+                "show"
+              ],
+              "dry_run": true,
+              "executed": false,
+              "reason": "dpu representor mapping: ovs-vsctl show",
+              "returncode": null
+            }
+          ],
+          "location": "dpu",
+          "mappings": [
+            {
+              "confidence": null,
+              "devlink_handle": null,
+              "dpu_representor_name": null,
+              "dpu_representor_portname": null,
+              "mapping_confidence": null,
+              "mapping_method": "nvidia-portname",
+              "mapping_source": null,
+              "no_representor_reason": "DPU representor probes planned but not executed (dry-run); no ip -d link / devlink port samples",
+              "phys_switch_id": null,
+              "representor_netdev": null,
+              "switchid": null,
+              "troubleshooting_hints": [
+                "run mapping with fixture samples or execute DPU probes (ip -d link show, devlink port show) on the BlueField Arm OS"
+              ],
+              "vf_index": 0,
+              "vf_pci": null,
+              "vf_pci_address": null
+            },
+            {
+              "confidence": null,
+              "devlink_handle": null,
+              "dpu_representor_name": null,
+              "dpu_representor_portname": null,
+              "mapping_confidence": null,
+              "mapping_method": "nvidia-portname",
+              "mapping_source": null,
+              "no_representor_reason": "DPU representor probes planned but not executed (dry-run); no ip -d link / devlink port samples",
+              "phys_switch_id": null,
+              "representor_netdev": null,
+              "switchid": null,
+              "troubleshooting_hints": [
+                "run mapping with fixture samples or execute DPU probes (ip -d link show, devlink port show) on the BlueField Arm OS"
+              ],
+              "vf_index": 1,
+              "vf_pci": null,
+              "vf_pci_address": null
+            }
+          ],
+          "mode": "discovery",
+          "note": "DPU-side NVIDIA mapping. eth0v1 is not a representor. Host sysfs virtfn mapping is not used in DPU mode.",
+          "require_high_confidence": true,
+          "schema_version": "odse-vf-representor-map/v1alpha1",
+          "sources": {
+            "devlink_port_show": false,
+            "ip_-d_link_show": false,
+            "location": "dpu",
+            "ovs_vsctl_show": false
+          },
+          "strategy": "nvidia-portname",
+          "timestamp": "2026-08-16T04:07:29.067331+00:00"
+        },
+        "vf_to_representor_map_error": null
+      },
+      "run_id": "20260816T040642Z",
+      "stage": "discover-representors"
+    },
+    {
+      "apply": false,
+      "dry_run": true,
+      "result": {
+        "apply": false,
+        "backend_result": {
+          "capabilities": null,
+          "commands": [],
+          "destructive": true,
+          "details": {
+            "bridge": "br-int",
+            "datapath_type": "doca",
+            "datapath_types": [],
+            "doca_datapath": false,
+            "doca_note": "OVS-DOCA is NVIDIA-specific and requires DOCA packages and a DOCA-enabled OVS; datapath_type=doca is invalid until listed",
+            "hw_offload": null,
+            "iface_types": [],
+            "other_config": {}
+          },
+          "devices": [],
+          "executed": false,
+          "flows": [],
+          "message": "datapath_type=doca requested but not in OVS datapath_types=[]",
+          "operation": "create_ovs_bridge",
+          "physical_functions": [],
+          "representors": [],
+          "status": "skipped",
+          "telemetry": [],
+          "vendor": "nvidia",
+          "virtual_functions": []
+        },
+        "bridge": "br-int",
+        "dry_run": true,
+        "lab_owned": true,
+        "stage": "prepare-ovs"
+      },
+      "run_id": "20260816T040642Z",
+      "stage": "prepare-ovs"
+    },
+    {
+      "apply": false,
+      "dry_run": true,
+      "result": {
+        "apply": false,
+        "commands": [
+          {
+            "argv": [
+              "virsh",
+              "define",
+              "/mnt/data/odse_audit/tests/results/nvidia-bluefield/20260816T040642Z/xml/odse-vm2vm-vm1.xml"
+            ],
+            "dry_run": true,
+            "executed": false,
+            "reason": "labctl create-vms: virsh define odse-vm2vm-vm1",
+            "returncode": null,
+            "shell": false,
+            "stderr": null,
+            "stdout": null,
+            "timed_out": false
+          },
+          {
+            "argv": [
+              "virsh",
+              "start",
+              "odse-vm2vm-vm1"
+            ],
+            "dry_run": true,
+            "executed": false,
+            "reason": "labctl create-vms: virsh start odse-vm2vm-vm1",
+            "returncode": null,
+            "shell": false,
+            "stderr": null,
+            "stdout": null,
+            "timed_out": false
+          },
+          {
+            "argv": [
+              "virsh",
+              "define",
+              "/mnt/data/odse_audit/tests/results/nvidia-bluefield/20260816T040642Z/xml/odse-vm2vm-vm2.xml"
+            ],
+            "dry_run": true,
+            "executed": false,
+            "reason": "labctl create-vms: virsh define odse-vm2vm-vm2",
+            "returncode": null,
+            "shell": false,
+            "stderr": null,
+            "stdout": null,
+            "timed_out": false
+          },
+          {
+            "argv": [
+              "virsh",
+              "start",
+              "odse-vm2vm-vm2"
+            ],
+            "dry_run": true,
+            "executed": false,
+            "reason": "labctl create-vms: virsh start odse-vm2vm-vm2",
+            "returncode": null,
+            "shell": false,
+            "stderr": null,
+            "stdout": null,
+            "timed_out": false
+          }
+        ],
+        "conflicts": [],
+        "dry_run": true,
+        "iommu_vfio": {
+          "iommu_groups_present": true,
+          "iommu_on_cmdline": false,
+          "message": "IOMMU/VFIO evidence is negative",
+          "ready": false,
+          "vfio_pci_present": true
+        },
+        "stage": "create-vms",
+        "start_vms": true,
+        "vms": [
+          {
+            "define": {
+              "argv": [
+                "virsh",
+                "define",
+                "/mnt/data/odse_audit/tests/results/nvidia-bluefield/20260816T040642Z/xml/odse-vm2vm-vm1.xml"
+              ],
+              "dry_run": true,
+              "executed": false,
+              "reason": "labctl create-vms: virsh define odse-vm2vm-vm1",
+              "returncode": null,
+              "shell": false,
+              "stderr": null,
+              "stdout": null,
+              "timed_out": false
+            },
+            "executed": false,
+            "include_vf_hostdev": false,
+            "name": "odse-vm2vm-vm1",
+            "start": {
+              "argv": [
+                "virsh",
+                "start",
+                "odse-vm2vm-vm1"
+              ],
+              "dry_run": true,
+              "executed": false,
+              "reason": "labctl create-vms: virsh start odse-vm2vm-vm1",
+              "returncode": null,
+              "shell": false,
+              "stderr": null,
+              "stdout": null,
+              "timed_out": false
+            },
+            "vf_index": 0,
+            "vf_pci": null,
+            "wait_for_boot": false,
+            "xml_path": "/mnt/data/odse_audit/tests/results/nvidia-bluefield/20260816T040642Z/xml/odse-vm2vm-vm1.xml",
+            "xml_preview": "<!--\n  ODSE VM-to-VM single-DPU lab: one KVM guest with one SR-IOV VF passed\n  through via VFIO. Used by `tools/labctl.py vm2vm create-vms`\n  (odse-lab-vm2vm/v1alpha1 config, one entry per `vms[]`).\n\n  This is a narrower, lab-specific sibling of\n  qemu/libvirt-xml/vf-passthrough.xml.template: same VFIO hostdev\n  pattern, but every placeholder maps 1:1 to a field labctl already has\n  from the vm2vm"
+          },
+          {
+            "define": {
+              "argv": [
+                "virsh",
+                "define",
+                "/mnt/data/odse_audit/tests/results/nvidia-bluefield/20260816T040642Z/xml/odse-vm2vm-vm2.xml"
+              ],
+              "dry_run": true,
+              "executed": false,
+              "reason": "labctl create-vms: virsh define odse-vm2vm-vm2",
+              "returncode": null,
+              "shell": false,
+              "stderr": null,
+              "stdout": null,
+              "timed_out": false
+            },
+            "executed": false,
+            "include_vf_hostdev": false,
+            "name": "odse-vm2vm-vm2",
+            "start": {
+              "argv": [
+                "virsh",
+                "start",
+                "odse-vm2vm-vm2"
+              ],
+              "dry_run": true,
+              "executed": false,
+              "reason": "labctl create-vms: virsh start odse-vm2vm-vm2",
+              "returncode": null,
+              "shell": false,
+              "stderr": null,
+              "stdout": null,
+              "timed_out": false
+            },
+            "vf_index": 1,
+            "vf_pci": null,
+            "wait_for_boot": false,
+            "xml_path": "/mnt/data/odse_audit/tests/results/nvidia-bluefield/20260816T040642Z/xml/odse-vm2vm-vm2.xml",
+            "xml_preview": "<!--\n  ODSE VM-to-VM single-DPU lab: one KVM guest with one SR-IOV VF passed\n  through via VFIO. Used by `tools/labctl.py vm2vm create-vms`\n  (odse-lab-vm2vm/v1alpha1 config, one entry per `vms[]`).\n\n  This is a narrower, lab-specific sibling of\n  qemu/libvirt-xml/vf-passthrough.xml.template: same VFIO hostdev\n  pattern, but every placeholder maps 1:1 to a field labctl already has\n  from the vm2vm"
+          }
+        ],
+        "wait_for_boot": false
+      },
+      "run_id": "20260816T040642Z",
+      "stage": "create-vms"
+    },
+    {
+      "apply": false,
+      "dry_run": true,
+      "result": {
+        "apply": false,
+        "conflicts": [],
+        "dry_run": true,
+        "iommu_vfio": {
+          "iommu_groups_present": true,
+          "iommu_on_cmdline": false,
+          "message": "IOMMU/VFIO evidence is negative",
+          "ready": false,
+          "vfio_pci_present": true
+        },
+        "stage": "attach-vfs",
+        "vms": [
+          {
+            "message": "vf_pci unknown; run discover-representors first (VFIO attach is not attempted without a confirmed PCI address)",
+            "name": "odse-vm2vm-vm1",
+            "skipped": true,
+            "vf_index": 0,
+            "vf_pci": null
+          },
+          {
+            "message": "vf_pci unknown; run discover-representors first (VFIO attach is not attempted without a confirmed PCI address)",
+            "name": "odse-vm2vm-vm2",
+            "skipped": true,
+            "vf_index": 1,
+            "vf_pci": null
+          }
+        ]
+      },
+      "run_id": "20260816T040642Z",
+      "stage": "attach-vfs"
+    },
+    {
+      "apply": false,
+      "dry_run": true,
+      "result": {
+        "dry_run": true,
+        "errors": [
+          "representor mapping is not high-confidence; refusing to configure forwarding",
+          "vf_index=0 representor=None confidence=None (require_high_confidence=true)",
+          "vf_index=1 representor=None confidence=None (require_high_confidence=true)"
+        ],
+        "intent": {
+          "bridge": "br-int",
+          "details": {
+            "datapath_type": "doca"
+          },
+          "endpoints": [
+            {
+              "ip_cidr": "198.51.100.11/24",
+              "mac": null,
+              "name": "vm1-endpoint",
+              "representor": null,
+              "role": null,
+              "vf_index": 0,
+              "vf_pci": null,
+              "vm": "odse-vm2vm-vm1"
+            },
+            {
+              "ip_cidr": "198.51.100.12/24",
+              "mac": null,
+              "name": "vm2-endpoint",
+              "representor": null,
+              "role": null,
+              "vf_index": 1,
+              "vf_pci": null,
+              "vm": "odse-vm2vm-vm2"
+            }
+          ],
+          "explicit_flows": {
+            "enabled": false
+          },
+          "mode": "bridge",
+          "name": "odse-vm2vm-nvidia",
+          "offload": {
+            "fallback_to_software": true,
+            "requested": true,
+            "require_confirmed_offload": false
+          },
+          "policy": {
+            "action": "allow",
+            "allowed_ethertypes": [],
+            "allowed_protocols": [],
+            "bidirectional": true,
+            "isolation_group": null
+          },
+          "type": "l2-vm-to-vm"
+        },
+        "stage": "configure-forwarding",
+        "success": false
+      },
+      "run_id": "20260816T040642Z",
+      "stage": "configure-forwarding"
+    },
+    {
+      "apply": false,
+      "dry_run": true,
+      "result": {
+        "dry_run": true,
+        "stage": "configure-vm-ips",
+        "vms": [
+          {
+            "code": "GUEST_SSH_REQUIRED",
+            "error": "GUEST_SSH_REQUIRED: management_ip not set and virsh domifaddr found no address; set vms[].management_ip or ensure the domain is running with a DHCP lease",
+            "ip_cidr": "198.51.100.11/24",
+            "name": "odse-vm2vm-vm1"
+          },
+          {
+            "code": "GUEST_SSH_REQUIRED",
+            "error": "GUEST_SSH_REQUIRED: management_ip not set and virsh domifaddr found no address; set vms[].management_ip or ensure the domain is running with a DHCP lease",
+            "ip_cidr": "198.51.100.12/24",
+            "name": "odse-vm2vm-vm2"
+          }
+        ]
+      },
+      "run_id": "20260816T040642Z",
+      "stage": "configure-vm-ips"
+    },
+    {
+      "apply": false,
+      "dry_run": true,
+      "result": {
+        "error": "management_host unknown for odse-vm2vm-vm1, odse-vm2vm-vm2",
+        "stage": "run-traffic"
+      },
+      "run_id": "20260816T040642Z",
+      "stage": "run-traffic"
+    },
+    {
+      "apply": false,
+      "dry_run": true,
+      "result": {
+        "backend_result": {
+          "capabilities": null,
+          "commands": [
+            {
+              "argv": [
+                "ssh",
+                "-o",
+                "BatchMode=yes",
+                "-o",
+                "StrictHostKeyChecking=accept-new",
+                "-p",
+                "22",
+                "<DPU_SSH_USER>@192.0.2.10",
+                "--",
+                "sudo",
+                "-n",
+                "ovs-vsctl",
+                "show"
+              ],
+              "dry_run": true,
+              "executed": false,
+              "reason": "dpu offload: ovs-vsctl show",
+              "returncode": null,
+              "shell": false,
+              "stderr": null,
+              "stdout": null,
+              "timed_out": false
+            },
+            {
+              "argv": [
+                "ssh",
+                "-o",
+                "BatchMode=yes",
+                "-o",
+                "StrictHostKeyChecking=accept-new",
+                "-p",
+                "22",
+                "<DPU_SSH_USER>@192.0.2.10",
+                "--",
+                "sudo",
+                "-n",
+                "ovs-ofctl",
+                "dump-flows",
+                "br-int"
+              ],
+              "dry_run": true,
+              "executed": false,
+              "reason": "dpu offload: ovs-ofctl dump-flows",
+              "returncode": null,
+              "shell": false,
+              "stderr": null,
+              "stdout": null,
+              "timed_out": false
+            },
+            {
+              "argv": [
+                "ssh",
+                "-o",
+                "BatchMode=yes",
+                "-o",
+                "StrictHostKeyChecking=accept-new",
+                "-p",
+                "22",
+                "<DPU_SSH_USER>@192.0.2.10",
+                "--",
+                "sudo",
+                "-n",
+                "ovs-appctl",
+                "dpctl/show"
+              ],
+              "dry_run": true,
+              "executed": false,
+              "reason": "dpu offload: dpctl/show",
+              "returncode": null,
+              "shell": false,
+              "stderr": null,
+              "stdout": null,
+              "timed_out": false
+            },
+            {
+              "argv": [
+                "ssh",
+                "-o",
+                "BatchMode=yes",
+                "-o",
+                "StrictHostKeyChecking=accept-new",
+                "-p",
+                "22",
+                "<DPU_SSH_USER>@192.0.2.10",
+                "--",
+                "sudo",
+                "-n",
+                "ovs-appctl",
+                "dpctl/dump-flows"
+              ],
+              "dry_run": true,
+              "executed": false,
+              "reason": "dpu offload: dpctl/dump-flows",
+              "returncode": null,
+              "shell": false,
+              "stderr": null,
+              "stdout": null,
+              "timed_out": false
+            }
+          ],
+          "destructive": false,
+          "details": {
+            "location": "dpu",
+            "offload_state": null,
+            "offloaded": null
+          },
+          "devices": [],
+          "executed": false,
+          "flows": [],
+          "message": "DPU-side OVS/OVS-DOCA probes planned; offload_state is unknown. No fake offloaded:yes.",
+          "operation": "validate_offload",
+          "physical_functions": [],
+          "representors": [],
+          "status": "ok",
+          "telemetry": [],
+          "vendor": "nvidia",
+          "virtual_functions": []
+        },
+        "forwarding": {
+          "bridge": "br-int",
+          "configured_flows": null,
+          "configured_ports": [],
+          "endpoints": [
+            {
+              "ip_cidr": "198.51.100.11/24",
+              "mac": null,
+              "name": "vm1-endpoint",
+              "representor": null,
+              "role": null,
+              "vf_index": 0,
+              "vf_pci": null,
+              "vm": "odse-vm2vm-vm1"
+            },
+            {
+              "ip_cidr": "198.51.100.12/24",
+              "mac": null,
+              "name": "vm2-endpoint",
+              "representor": null,
+              "role": null,
+              "vf_index": 1,
+              "vf_pci": null,
+              "vm": "odse-vm2vm-vm2"
+            }
+          ],
+          "name": "odse-vm2vm-nvidia",
+          "offload_configured": null,
+          "offload_requested": null,
+          "representors": [],
+          "vf_pci_addresses": []
+        },
+        "offload_checker_error": null,
+        "offload_checker_report": {
+          "assessment": {
+            "confidence": 0.0,
+            "evidence": [],
+            "limitations": [
+              "This is a heuristic based on documented upstream OVS/TC markers and generically-named counters, not a vendor-verified proof of hardware offload.",
+              "Functional connectivity (ping/iperf succeeding) is not evidence of offload -- software-only forwarding produces identical application-level results.",
+              "Absence of markers is common and expected on OVS-DPDK/userspace datapaths, some vendor OVS builds, and unprivileged runs; it does not prove software-only forwarding.",
+              "ethtool counter names are vendor-specific; the generic highlight regex will miss some vendor counters and may highlight unrelated drop/discard counters.",
+              "TC 'in_hw' is self-reported by the driver; drivers differ in when or whether they set it.",
+              "Counter deltas collected with --duration measure activity during a time window, not necessarily the specific test traffic; avoid background traffic for a clean signal."
+            ],
+            "status": "unknown",
+            "warnings": [
+              "ovs-appctl dpctl/dump-flows: DPU probe planned (not executed; dry-run / no samples)",
+              "tc filter show returned no filters on any requested interface"
+            ]
+          },
+          "cpu_snapshot": {
+            "skipped": "host /proc/stat is not DPU offload evidence"
+          },
+          "dpctl_dump_flows": {
+            "command": {
+              "argv": [
+                "ssh",
+                "-o",
+                "BatchMode=yes",
+                "-o",
+                "StrictHostKeyChecking=accept-new",
+                "-p",
+                "22",
+                "<DPU_SSH_USER>@192.0.2.10",
+                "--",
+                "sudo",
+                "-n",
+                "ovs-appctl",
+                "dpctl/dump-flows",
+                "-m"
+              ],
+              "available": false,
+              "command": "ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new -p 22 <DPU_SSH_USER>@192.0.2.10 -- sudo -n ovs-appctl dpctl/dump-flows -m",
+              "error": "DPU probe planned (not executed; dry-run / no samples)",
+              "returncode": null,
+              "stderr": null,
+              "stdout": null
+            },
+            "counts": {},
+            "flows": [],
+            "planned": true,
+            "stdout_lines": []
+          },
+          "dpctl_show": {
+            "command": {
+              "argv": [
+                "ssh",
+                "-o",
+                "BatchMode=yes",
+                "-o",
+                "StrictHostKeyChecking=accept-new",
+                "-p",
+                "22",
+                "<DPU_SSH_USER>@192.0.2.10",
+                "--",
+                "sudo",
+                "-n",
+                "ovs-appctl",
+                "dpctl/show"
+              ],
+              "available": false,
+              "command": "ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new -p 22 <DPU_SSH_USER>@192.0.2.10 -- sudo -n ovs-appctl dpctl/show",
+              "error": "DPU probe planned (not executed; dry-run / no samples)",
+              "returncode": null,
+              "stderr": null,
+              "stdout": null
+            },
+            "planned": true,
+            "stdout_lines": []
+          },
+          "dpu_evidence": {
+            "dpctl_dump_flows": {
+              "command": {
+                "argv": [
+                  "ssh",
+                  "-o",
+                  "BatchMode=yes",
+                  "-o",
+                  "StrictHostKeyChecking=accept-new",
+                  "-p",
+                  "22",
+                  "<DPU_SSH_USER>@192.0.2.10",
+                  "--",
+                  "sudo",
+                  "-n",
+                  "ovs-appctl",
+                  "dpctl/dump-flows",
+                  "-m"
+                ],
+                "available": false,
+                "command": "ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new -p 22 <DPU_SSH_USER>@192.0.2.10 -- sudo -n ovs-appctl dpctl/dump-flows -m",
+                "error": "DPU probe planned (not executed; dry-run / no samples)",
+                "returncode": null,
+                "stderr": null,
+                "stdout": null
+              },
+              "counts": {},
+              "flows": [],
+              "planned": true,
+              "stdout_lines": []
+            },
+            "dpctl_show": {
+              "command": {
+                "argv": [
+                  "ssh",
+                  "-o",
+                  "BatchMode=yes",
+                  "-o",
+                  "StrictHostKeyChecking=accept-new",
+                  "-p",
+                  "22",
+                  "<DPU_SSH_USER>@192.0.2.10",
+                  "--",
+                  "sudo",
+                  "-n",
+                  "ovs-appctl",
+                  "dpctl/show"
+                ],
+                "available": false,
+                "command": "ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new -p 22 <DPU_SSH_USER>@192.0.2.10 -- sudo -n ovs-appctl dpctl/show",
+                "error": "DPU probe planned (not executed; dry-run / no samples)",
+                "returncode": null,
+                "stderr": null,
+                "stdout": null
+              },
+              "planned": true,
+              "stdout_lines": []
+            },
+            "ethtool_stats": {
+              "interfaces": [],
+              "planned": true
+            },
+            "ofctl_dump_flows": {
+              "command": {
+                "argv": [
+                  "ssh",
+                  "-o",
+                  "BatchMode=yes",
+                  "-o",
+                  "StrictHostKeyChecking=accept-new",
+                  "-p",
+                  "22",
+                  "<DPU_SSH_USER>@192.0.2.10",
+                  "--",
+                  "sudo",
+                  "-n",
+                  "ovs-ofctl",
+                  "dump-flows",
+                  "br-int"
+                ],
+                "available": false,
+                "command": "ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new -p 22 <DPU_SSH_USER>@192.0.2.10 -- sudo -n ovs-ofctl dump-flows br-int",
+                "error": "DPU probe planned (not executed; dry-run / no samples)",
+                "returncode": null,
+                "stderr": null,
+                "stdout": null
+              },
+              "planned": true,
+              "stdout_lines": []
+            },
+            "ovs_vsctl_show": {
+              "command": {
+                "argv": [
+                  "ssh",
+                  "-o",
+                  "BatchMode=yes",
+                  "-o",
+                  "StrictHostKeyChecking=accept-new",
+                  "-p",
+                  "22",
+                  "<DPU_SSH_USER>@192.0.2.10",
+                  "--",
+                  "sudo",
+                  "-n",
+                  "ovs-vsctl",
+                  "show"
+                ],
+                "available": false,
+                "command": "ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new -p 22 <DPU_SSH_USER>@192.0.2.10 -- sudo -n ovs-vsctl show",
+                "error": "DPU probe planned (not executed; dry-run / no samples)",
+                "returncode": null,
+                "stderr": null,
+                "stdout": null
+              },
+              "planned": true,
+              "stdout_lines": []
+            },
+            "tc_filters": {
+              "interfaces": [],
+              "planned": true
+            }
+          },
+          "duration": null,
+          "ethtool_stats": {
+            "interfaces": [],
+            "planned": true
+          },
+          "forwarding_result": {
+            "bridge": "br-int",
+            "configured_flows": [],
+            "configured_ports": [],
+            "control_entity": null,
+            "error": null,
+            "forwarding_entity": null,
+            "name": "odse-vm2vm-nvidia",
+            "offload_configured": null,
+            "offload_requested": null,
+            "path": "/mnt/data/odse_audit/tests/results/nvidia-bluefield/20260816T040642Z/configure_forwarding.json",
+            "representors": [],
+            "vf_pci_addresses": []
+          },
+          "host": "SandboxHost-639224489449796250",
+          "host_evidence": {
+            "cpu_snapshot": {
+              "skipped": "host /proc/stat is not DPU offload evidence"
+            },
+            "note": "Host OVS is not the forwarding owner in DPU mode; host ovs-vsctl is not DPU offload proof."
+          },
+          "inputs": {
+            "bridge": "br-int",
+            "datapath": null,
+            "dump_flows_more": true,
+            "duration_seconds": 0.0,
+            "flow": null,
+            "forwarding_result_path": "/mnt/data/odse_audit/tests/results/nvidia-bluefield/20260816T040642Z/configure_forwarding.json",
+            "interfaces": [],
+            "location": "dpu",
+            "pf": null,
+            "vendor": null
+          },
+          "ip_link_stats": {
+            "interfaces": [],
+            "skipped": "DPU location: host ip -s link is not DPU evidence"
+          },
+          "location": "dpu",
+          "ofctl_dump_flows": {
+            "command": {
+              "argv": [
+                "ssh",
+                "-o",
+                "BatchMode=yes",
+                "-o",
+                "StrictHostKeyChecking=accept-new",
+                "-p",
+                "22",
+                "<DPU_SSH_USER>@192.0.2.10",
+                "--",
+                "sudo",
+                "-n",
+                "ovs-ofctl",
+                "dump-flows",
+                "br-int"
+              ],
+              "available": false,
+              "command": "ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new -p 22 <DPU_SSH_USER>@192.0.2.10 -- sudo -n ovs-ofctl dump-flows br-int",
+              "error": "DPU probe planned (not executed; dry-run / no samples)",
+              "returncode": null,
+              "stderr": null,
+              "stdout": null
+            },
+            "planned": true,
+            "stdout_lines": []
+          },
+          "offload_confidence": {
+            "confidence": 0.0,
+            "evidence": [],
+            "limitations": [
+              "This is a heuristic based on documented upstream OVS/TC markers and generically-named counters, not a vendor-verified proof of hardware offload.",
+              "Functional connectivity (ping/iperf succeeding) is not evidence of offload -- software-only forwarding produces identical application-level results.",
+              "Absence of markers is common and expected on OVS-DPDK/userspace datapaths, some vendor OVS builds, and unprivileged runs; it does not prove software-only forwarding.",
+              "ethtool counter names are vendor-specific; the generic highlight regex will miss some vendor counters and may highlight unrelated drop/discard counters.",
+              "TC 'in_hw' is self-reported by the driver; drivers differ in when or whether they set it.",
+              "Counter deltas collected with --duration measure activity during a time window, not necessarily the specific test traffic; avoid background traffic for a clean signal."
+            ],
+            "status": "unknown",
+            "warnings": [
+              "ovs-appctl dpctl/dump-flows: DPU probe planned (not executed; dry-run / no samples)",
+              "tc filter show returned no filters on any requested interface"
+            ]
+          },
+          "ofproto_trace": null,
+          "ovs_vsctl_show": {
+            "command": {
+              "argv": [
+                "ssh",
+                "-o",
+                "BatchMode=yes",
+                "-o",
+                "StrictHostKeyChecking=accept-new",
+                "-p",
+                "22",
+                "<DPU_SSH_USER>@192.0.2.10",
+                "--",
+                "sudo",
+                "-n",
+                "ovs-vsctl",
+                "show"
+              ],
+              "available": false,
+              "command": "ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new -p 22 <DPU_SSH_USER>@192.0.2.10 -- sudo -n ovs-vsctl show",
+              "error": "DPU probe planned (not executed; dry-run / no samples)",
+              "returncode": null,
+              "stderr": null,
+              "stdout": null
+            },
+            "planned": true,
+            "stdout_lines": []
+          },
+          "plugins": {
+            "loaded": [],
+            "results": {}
+          },
+          "schema_version": "odse-ovs-offload-checker/v1alpha1",
+          "summary": {
+            "datapath_flows": {},
+            "note": "Classifications are heuristic. Markers such as offloaded:yes, dp:tc, and TC in_hw indicate *probable* hardware offload; their absence does not prove software-only forwarding. See report['assessment'] for the combined status/confidence and docs/test-plan/offload-validation.md for how to read it."
+          },
+          "tc_filters": {
+            "interfaces": [],
+            "planned": true
+          },
+          "timestamp": "2026-08-16T04:07:33.295651+00:00",
+          "traffic_evidence": null,
+          "vm_evidence": {
+            "note": "Guest/VF counters are not invented; collect via VM SSH when available.",
+            "representors": [],
+            "vf_pci_addresses": []
+          }
+        },
+        "stage": "validate-offload"
+      },
+      "run_id": "20260816T040642Z",
+      "stage": "validate-offload"
+    },
+    {
+      "apply": false,
+      "dry_run": true,
+      "result": {
+        "evidence": {
+          "cpu_stats": "cpu  18804 0 4399 180690 4301 0 878 0 0 0\ncpu0 9464 0 2291 89660 2723 0 359 0 0 0\ncpu1 9340 0 2108 91029 1577 0 519 0 0 0\nintr 1173008 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0\nctxt 3341578\nbtime 1786852154\nprocesses 2334\nprocs_running 1\nprocs_blocked 0\nsoftirq 735966 0 84834 0 96118 0 0 68639 221216 0 265159\n",
+          "cpu_stats_error": null,
+          "offload_checker_report": {
+            "assessment": {
+              "confidence": 0.0,
+              "evidence": [],
+              "limitations": [
+                "This is a heuristic based on documented upstream OVS/TC markers and generically-named counters, not a vendor-verified proof of hardware offload.",
+                "Functional connectivity (ping/iperf succeeding) is not evidence of offload -- software-only forwarding produces identical application-level results.",
+                "Absence of markers is common and expected on OVS-DPDK/userspace datapaths, some vendor OVS builds, and unprivileged runs; it does not prove software-only forwarding.",
+                "ethtool counter names are vendor-specific; the generic highlight regex will miss some vendor counters and may highlight unrelated drop/discard counters.",
+                "TC 'in_hw' is self-reported by the driver; drivers differ in when or whether they set it.",
+                "Counter deltas collected with --duration measure activity during a time window, not necessarily the specific test traffic; avoid background traffic for a clean signal."
+              ],
+              "status": "unknown",
+              "warnings": [
+                "ovs-appctl dpctl/dump-flows: DPU probe planned (not executed; dry-run / no samples)",
+                "tc filter show returned no filters on any requested interface"
+              ]
+            },
+            "cpu_snapshot": {
+              "skipped": "host /proc/stat is not DPU offload evidence"
+            },
+            "dpctl_dump_flows": {
+              "command": {
+                "argv": [
+                  "ssh",
+                  "-o",
+                  "BatchMode=yes",
+                  "-o",
+                  "StrictHostKeyChecking=accept-new",
+                  "-p",
+                  "22",
+                  "<DPU_SSH_USER>@192.0.2.10",
+                  "--",
+                  "sudo",
+                  "-n",
+                  "ovs-appctl",
+                  "dpctl/dump-flows",
+                  "-m"
+                ],
+                "available": false,
+                "command": "ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new -p 22 <DPU_SSH_USER>@192.0.2.10 -- sudo -n ovs-appctl dpctl/dump-flows -m",
+                "error": "DPU probe planned (not executed; dry-run / no samples)",
+                "returncode": null,
+                "stderr": null,
+                "stdout": null
+              },
+              "counts": {},
+              "flows": [],
+              "planned": true,
+              "stdout_lines": []
+            },
+            "dpctl_show": {
+              "command": {
+                "argv": [
+                  "ssh",
+                  "-o",
+                  "BatchMode=yes",
+                  "-o",
+                  "StrictHostKeyChecking=accept-new",
+                  "-p",
+                  "22",
+                  "<DPU_SSH_USER>@192.0.2.10",
+                  "--",
+                  "sudo",
+                  "-n",
+                  "ovs-appctl",
+                  "dpctl/show"
+                ],
+                "available": false,
+                "command": "ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new -p 22 <DPU_SSH_USER>@192.0.2.10 -- sudo -n ovs-appctl dpctl/show",
+                "error": "DPU probe planned (not executed; dry-run / no samples)",
+                "returncode": null,
+                "stderr": null,
+                "stdout": null
+              },
+              "planned": true,
+              "stdout_lines": []
+            },
+            "dpu_evidence": {
+              "dpctl_dump_flows": {
+                "command": {
+                  "argv": [
+                    "ssh",
+                    "-o",
+                    "BatchMode=yes",
+                    "-o",
+                    "StrictHostKeyChecking=accept-new",
+                    "-p",
+                    "22",
+                    "<DPU_SSH_USER>@192.0.2.10",
+                    "--",
+                    "sudo",
+                    "-n",
+                    "ovs-appctl",
+                    "dpctl/dump-flows",
+                    "-m"
+                  ],
+                  "available": false,
+                  "command": "ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new -p 22 <DPU_SSH_USER>@192.0.2.10 -- sudo -n ovs-appctl dpctl/dump-flows -m",
+                  "error": "DPU probe planned (not executed; dry-run / no samples)",
+                  "returncode": null,
+                  "stderr": null,
+                  "stdout": null
+                },
+                "counts": {},
+                "flows": [],
+                "planned": true,
+                "stdout_lines": []
+              },
+              "dpctl_show": {
+                "command": {
+                  "argv": [
+                    "ssh",
+                    "-o",
+                    "BatchMode=yes",
+                    "-o",
+                    "StrictHostKeyChecking=accept-new",
+                    "-p",
+                    "22",
+                    "<DPU_SSH_USER>@192.0.2.10",
+                    "--",
+                    "sudo",
+                    "-n",
+                    "ovs-appctl",
+                    "dpctl/show"
+                  ],
+                  "available": false,
+                  "command": "ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new -p 22 <DPU_SSH_USER>@192.0.2.10 -- sudo -n ovs-appctl dpctl/show",
+                  "error": "DPU probe planned (not executed; dry-run / no samples)",
+                  "returncode": null,
+                  "stderr": null,
+                  "stdout": null
+                },
+                "planned": true,
+                "stdout_lines": []
+              },
+              "ethtool_stats": {
+                "interfaces": [],
+                "planned": true
+              },
+              "ofctl_dump_flows": {
+                "command": {
+                  "argv": [
+                    "ssh",
+                    "-o",
+                    "BatchMode=yes",
+                    "-o",
+                    "StrictHostKeyChecking=accept-new",
+                    "-p",
+                    "22",
+                    "<DPU_SSH_USER>@192.0.2.10",
+                    "--",
+                    "sudo",
+                    "-n",
+                    "ovs-ofctl",
+                    "dump-flows",
+                    "br-int"
+                  ],
+                  "available": false,
+                  "command": "ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new -p 22 <DPU_SSH_USER>@192.0.2.10 -- sudo -n ovs-ofctl dump-flows br-int",
+                  "error": "DPU probe planned (not executed; dry-run / no samples)",
+                  "returncode": null,
+                  "stderr": null,
+                  "stdout": null
+                },
+                "planned": true,
+                "stdout_lines": []
+              },
+              "ovs_vsctl_show": {
+                "command": {
+                  "argv": [
+                    "ssh",
+                    "-o",
+                    "BatchMode=yes",
+                    "-o",
+                    "StrictHostKeyChecking=accept-new",
+                    "-p",
+                    "22",
+                    "<DPU_SSH_USER>@192.0.2.10",
+                    "--",
+                    "sudo",
+                    "-n",
+                    "ovs-vsctl",
+                    "show"
+                  ],
+                  "available": false,
+                  "command": "ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new -p 22 <DPU_SSH_USER>@192.0.2.10 -- sudo -n ovs-vsctl show",
+                  "error": "DPU probe planned (not executed; dry-run / no samples)",
+                  "returncode": null,
+                  "stderr": null,
+                  "stdout": null
+                },
+                "planned": true,
+                "stdout_lines": []
+              },
+              "tc_filters": {
+                "interfaces": [],
+                "planned": true
+              }
+            },
+            "duration": null,
+            "ethtool_stats": {
+              "interfaces": [],
+              "planned": true
+            },
+            "forwarding_result": {
+              "bridge": "br-int",
+              "configured_flows": [],
+              "configured_ports": [],
+              "control_entity": null,
+              "error": null,
+              "forwarding_entity": null,
+              "name": "odse-vm2vm-nvidia",
+              "offload_configured": null,
+              "offload_requested": null,
+              "path": "/mnt/data/odse_audit/tests/results/nvidia-bluefield/20260816T040642Z/configure_forwarding.json",
+              "representors": [],
+              "vf_pci_addresses": []
+            },
+            "host": "SandboxHost-639224489449796250",
+            "host_evidence": {
+              "cpu_snapshot": {
+                "skipped": "host /proc/stat is not DPU offload evidence"
+              },
+              "note": "Host OVS is not the forwarding owner in DPU mode; host ovs-vsctl is not DPU offload proof."
+            },
+            "inputs": {
+              "bridge": "br-int",
+              "datapath": null,
+              "dump_flows_more": true,
+              "duration_seconds": 0.0,
+              "flow": null,
+              "forwarding_result_path": "/mnt/data/odse_audit/tests/results/nvidia-bluefield/20260816T040642Z/configure_forwarding.json",
+              "interfaces": [],
+              "location": "dpu",
+              "pf": null,
+              "vendor": null
+            },
+            "ip_link_stats": {
+              "interfaces": [],
+              "skipped": "DPU location: host ip -s link is not DPU evidence"
+            },
+            "location": "dpu",
+            "ofctl_dump_flows": {
+              "command": {
+                "argv": [
+                  "ssh",
+                  "-o",
+                  "BatchMode=yes",
+                  "-o",
+                  "StrictHostKeyChecking=accept-new",
+                  "-p",
+                  "22",
+                  "<DPU_SSH_USER>@192.0.2.10",
+                  "--",
+                  "sudo",
+                  "-n",
+                  "ovs-ofctl",
+                  "dump-flows",
+                  "br-int"
+                ],
+                "available": false,
+                "command": "ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new -p 22 <DPU_SSH_USER>@192.0.2.10 -- sudo -n ovs-ofctl dump-flows br-int",
+                "error": "DPU probe planned (not executed; dry-run / no samples)",
+                "returncode": null,
+                "stderr": null,
+                "stdout": null
+              },
+              "planned": true,
+              "stdout_lines": []
+            },
+            "offload_confidence": {
+              "confidence": 0.0,
+              "evidence": [],
+              "limitations": [
+                "This is a heuristic based on documented upstream OVS/TC markers and generically-named counters, not a vendor-verified proof of hardware offload.",
+                "Functional connectivity (ping/iperf succeeding) is not evidence of offload -- software-only forwarding produces identical application-level results.",
+                "Absence of markers is common and expected on OVS-DPDK/userspace datapaths, some vendor OVS builds, and unprivileged runs; it does not prove software-only forwarding.",
+                "ethtool counter names are vendor-specific; the generic highlight regex will miss some vendor counters and may highlight unrelated drop/discard counters.",
+                "TC 'in_hw' is self-reported by the driver; drivers differ in when or whether they set it.",
+                "Counter deltas collected with --duration measure activity during a time window, not necessarily the specific test traffic; avoid background traffic for a clean signal."
+              ],
+              "status": "unknown",
+              "warnings": [
+                "ovs-appctl dpctl/dump-flows: DPU probe planned (not executed; dry-run / no samples)",
+                "tc filter show returned no filters on any requested interface"
+              ]
+            },
+            "ofproto_trace": null,
+            "ovs_vsctl_show": {
+              "command": {
+                "argv": [
+                  "ssh",
+                  "-o",
+                  "BatchMode=yes",
+                  "-o",
+                  "StrictHostKeyChecking=accept-new",
+                  "-p",
+                  "22",
+                  "<DPU_SSH_USER>@192.0.2.10",
+                  "--",
+                  "sudo",
+                  "-n",
+                  "ovs-vsctl",
+                  "show"
+                ],
+                "available": false,
+                "command": "ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new -p 22 <DPU_SSH_USER>@192.0.2.10 -- sudo -n ovs-vsctl show",
+                "error": "DPU probe planned (not executed; dry-run / no samples)",
+                "returncode": null,
+                "stderr": null,
+                "stdout": null
+              },
+              "planned": true,
+              "stdout_lines": []
+            },
+            "plugins": {
+              "loaded": [],
+              "results": {}
+            },
+            "schema_version": "odse-ovs-offload-checker/v1alpha1",
+            "summary": {
+              "datapath_flows": {},
+              "note": "Classifications are heuristic. Markers such as offloaded:yes, dp:tc, and TC in_hw indicate *probable* hardware offload; their absence does not prove software-only forwarding. See report['assessment'] for the combined status/confidence and docs/test-plan/offload-validation.md for how to read it."
+            },
+            "tc_filters": {
+              "interfaces": [],
+              "planned": true
+            },
+            "timestamp": "2026-08-16T04:07:33.295651+00:00",
+            "traffic_evidence": null,
+            "vm_evidence": {
+              "note": "Guest/VF counters are not invented; collect via VM SSH when available.",
+              "representors": [],
+              "vf_pci_addresses": []
+            }
+          },
+          "telemetry": {
+            "capabilities": null,
+            "commands": [
+              {
+                "argv": [
+                  "ssh",
+                  "-o",
+                  "BatchMode=yes",
+                  "-o",
+                  "StrictHostKeyChecking=accept-new",
+                  "-p",
+                  "22",
+                  "<DPU_SSH_USER>@192.0.2.10",
+                  "--",
+                  "sudo",
+                  "-n",
+                  "ovs-vsctl",
+                  "show"
+                ],
+                "dry_run": true,
+                "executed": false,
+                "reason": "dpu ovs evidence",
+                "returncode": null,
+                "shell": false,
+                "stderr": null,
+                "stdout": null,
+                "timed_out": false
+              }
+            ],
+            "destructive": false,
+            "details": {
+              "location": "dpu",
+              "source_id": null
+            },
+            "devices": [],
+            "executed": false,
+            "flows": [],
+            "message": "DPU-side ovs-vsctl show planned; no fake counters",
+            "operation": "collect_telemetry",
+            "physical_functions": [],
+            "representors": [],
+            "status": "ok",
+            "telemetry": [],
+            "vendor": "nvidia",
+            "virtual_functions": []
+          }
+        },
+        "requested": {
+          "collect_cpu_stats": true,
+          "collect_ethtool_stats": true,
+          "collect_ovs_flows": true,
+          "collect_tc_filters": true,
+          "collect_vendor_telemetry": true
+        },
+        "stage": "collect-evidence"
+      },
+      "run_id": "20260816T040642Z",
+      "stage": "collect-evidence"
+    }
+  ],
+  "vendor": "nvidia-bluefield"
+}

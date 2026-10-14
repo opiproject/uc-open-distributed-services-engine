@@ -1,0 +1,5 @@
+driver: mlx5_core
+version: 5.0-0
+firmware-version: 32.41.1000 (MT_0000000000)
+bus-info: 0000:03:00.0
+supports-statistics: yes

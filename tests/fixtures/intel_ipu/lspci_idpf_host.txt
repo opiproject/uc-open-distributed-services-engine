@@ -1,0 +1,4 @@
+00:1f.0 ISA bridge [0601]: Intel Corporation Device [8086:1b81] (rev 11)
+0a:00.0 Ethernet controller [0200]: Intel Corporation Infrastructure Data Path Function [8086:1452] (rev 20)
+0a:00.1 Non-Volatile memory controller [0108]: Intel Corporation Device [8086:1457] (rev 20)
+1f:00.0 Ethernet controller [0200]: Broadcom Inc. and subsidiaries BCM57416 NetXtreme-E Dual-Media 10G RDMA Ethernet Controller [14e4:16d8] (rev 01)

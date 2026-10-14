@@ -1,0 +1,214 @@
+---
+# tasks/add_port.yml
+#
+# Task 4: included once per item in ovs_ports (see tasks/main.yml). The
+# current item is available as `ovs_setup_port_item` via loop_control.
+# Applies equally to plain kernel ports, switchdev representor ports, and
+# DPDK/vendor interface types -- this role does not special-case
+# "representor" as a distinct concept; it is just a port/interface like
+# any other from OVS's point of view (see README.md).
+
+- name: Reset per-port result tracking
+  ansible.builtin.set_fact:
+    ovs_setup_port_valid: true
+    ovs_setup_port_error: null
+    ovs_setup_port_changed: false
+
+- name: Mark port invalid if required fields are missing
+  ansible.builtin.set_fact:
+    ovs_setup_port_valid: false
+    ovs_setup_port_error: "entry must be an object with at least 'bridge' and 'port' keys"
+  when: >-
+    (ovs_setup_port_item is not mapping)
+    or (ovs_setup_port_item.bridge | default('') | length == 0)
+    or (ovs_setup_port_item.port | default('') | length == 0)
+
+- name: Extract port fields
+  ansible.builtin.set_fact:
+    ovs_setup_port_bridge: "{{ ovs_setup_port_item.bridge }}"
+    ovs_setup_port_name: "{{ ovs_setup_port_item.port }}"
+    ovs_setup_port_interface_type: "{{ ovs_setup_port_item.interface_type | default('system') }}"
+    ovs_setup_port_options: "{{ ovs_setup_port_item.options | default({}) }}"
+    ovs_setup_port_tag: "{{ ovs_setup_port_item.tag | default('') }}"
+    ovs_setup_port_mtu_request: "{{ ovs_setup_port_item.mtu_request | default('') }}"
+    ovs_setup_port_extra_set: "{{ ovs_setup_port_item.set | default([]) }}"
+  when: ovs_setup_port_valid | bool
+
+- name: Check which bridge (if any) currently owns this port
+  ansible.builtin.command:
+    cmd: "ovs-vsctl port-to-br {{ ovs_setup_port_name }}"
+  register: ovs_setup_port_to_br_result
+  changed_when: false
+  failed_when: false
+  when: ovs_setup_port_valid | bool
+
+- name: Mark port invalid if it already belongs to a different bridge
+  ansible.builtin.set_fact:
+    ovs_setup_port_valid: false
+    ovs_setup_port_error: >-
+      port '{{ ovs_setup_port_name }}' already belongs to bridge
+      '{{ ovs_setup_port_to_br_result.stdout | trim }}', not the requested
+      '{{ ovs_setup_port_bridge }}'. This role does not move ports
+      between bridges automatically -- remove it manually first
+      ('ovs-vsctl del-port') if you intend to move it.
+  when:
+    - ovs_setup_port_valid | bool
+    - ovs_setup_port_to_br_result.rc == 0
+    - (ovs_setup_port_to_br_result.stdout | trim) != ovs_setup_port_bridge
+
+- name: Add the port to the bridge if it does not already exist there
+  ansible.builtin.command:
+    cmd: "ovs-vsctl add-port {{ ovs_setup_port_bridge }} {{ ovs_setup_port_name }}"
+  register: ovs_setup_port_add_result
+  failed_when: false
+  when:
+    - ovs_setup_port_valid | bool
+    - ovs_setup_port_to_br_result.rc != 0
+
+- name: Mark port invalid if add-port failed
+  ansible.builtin.set_fact:
+    ovs_setup_port_valid: false
+    ovs_setup_port_error: >-
+      'ovs-vsctl add-port {{ ovs_setup_port_bridge }} {{ ovs_setup_port_name }}'
+      failed: {{ ovs_setup_port_add_result.stderr | default('unknown error') | trim }}.
+      If this is a representor port, confirm switchdev mode is enabled
+      and the representor netdev actually exists (see
+      ansible/roles/switchdev_setup); if this is a DPDK/vendor interface
+      type, confirm the OVS build on this host actually supports it.
+  when:
+    - ovs_setup_port_add_result is defined
+    - ovs_setup_port_add_result.rc | default(0) != 0
+
+- name: Record port creation as a change
+  ansible.builtin.set_fact:
+    ovs_setup_port_changed: true
+  when: ovs_setup_port_add_result is defined and ovs_setup_port_add_result is changed
+
+- name: Set interface type, if not already correct (idempotent)
+  ansible.builtin.shell:
+    cmd: |
+      current="$(ovs-vsctl get interface "{{ ovs_setup_port_name }}" type 2>/dev/null | tr -d '"')"
+      if [ "$current" != "{{ ovs_setup_port_interface_type }}" ]; then
+        ovs-vsctl set interface "{{ ovs_setup_port_name }}" type="{{ ovs_setup_port_interface_type }}" && echo CHANGED
+      else
+        echo UNCHANGED
+      fi
+  register: ovs_setup_port_type_result
+  changed_when: "'CHANGED' in ovs_setup_port_type_result.stdout"
+  failed_when: false
+  when:
+    - ovs_setup_port_valid | bool
+    - ovs_setup_port_interface_type | length > 0
+
+- name: Warn if setting interface type failed
+  ansible.builtin.debug:
+    msg: >-
+      failed to set interface type '{{ ovs_setup_port_interface_type }}' on
+      '{{ ovs_setup_port_name }}':
+      {{ ovs_setup_port_type_result.stderr | default('unknown error') | trim }}
+  when:
+    - ovs_setup_port_type_result is defined
+    - ovs_setup_port_type_result.rc | default(0) != 0
+
+- name: Set interface options, if provided and not already correct (idempotent)
+  ansible.builtin.shell:
+    cmd: |
+      current="$(ovs-vsctl get interface "{{ ovs_setup_port_name }}" options:{{ item.key }} 2>/dev/null | tr -d '"')"
+      if [ "$current" != "{{ item.value }}" ]; then
+        ovs-vsctl set interface "{{ ovs_setup_port_name }}" "options:{{ item.key }}={{ item.value }}" && echo CHANGED
+      else
+        echo UNCHANGED
+      fi
+  loop: "{{ ovs_setup_port_options | dict2items }}"
+  register: ovs_setup_port_options_result
+  changed_when: "'CHANGED' in ovs_setup_port_options_result.stdout"
+  failed_when: false
+  when: ovs_setup_port_valid | bool
+
+- name: Warn about any interface options that failed to apply
+  ansible.builtin.debug:
+    msg: >-
+      failed to set options for '{{ ovs_setup_port_name }}':
+      {{ ovs_setup_port_options_result.results
+         | default([])
+         | selectattr('rc', 'defined')
+         | rejectattr('rc', 'equalto', 0)
+         | map(attribute='item')
+         | list }}
+  when: >-
+    ovs_setup_port_options_result.results
+    | default([])
+    | selectattr('rc', 'defined')
+    | rejectattr('rc', 'equalto', 0)
+    | list
+    | length > 0
+
+- name: Set VLAN tag, if provided and not already correct (idempotent)
+  ansible.builtin.shell:
+    cmd: |
+      current="$(ovs-vsctl get port "{{ ovs_setup_port_name }}" tag 2>/dev/null)"
+      if [ "$current" != "{{ ovs_setup_port_tag }}" ]; then
+        ovs-vsctl set port "{{ ovs_setup_port_name }}" tag="{{ ovs_setup_port_tag }}" && echo CHANGED
+      else
+        echo UNCHANGED
+      fi
+  register: ovs_setup_port_tag_result
+  changed_when: "'CHANGED' in ovs_setup_port_tag_result.stdout"
+  failed_when: false
+  when:
+    - ovs_setup_port_valid | bool
+    - ovs_setup_port_tag | length > 0
+
+- name: Set mtu_request, if provided and not already correct (idempotent)
+  ansible.builtin.shell:
+    cmd: |
+      current="$(ovs-vsctl get interface "{{ ovs_setup_port_name }}" mtu_request 2>/dev/null)"
+      if [ "$current" != "{{ ovs_setup_port_mtu_request }}" ]; then
+        ovs-vsctl set interface "{{ ovs_setup_port_name }}" mtu_request="{{ ovs_setup_port_mtu_request }}" && echo CHANGED
+      else
+        echo UNCHANGED
+      fi
+  register: ovs_setup_port_mtu_result
+  changed_when: "'CHANGED' in ovs_setup_port_mtu_result.stdout"
+  failed_when: false
+  when:
+    - ovs_setup_port_valid | bool
+    - ovs_setup_port_mtu_request | length > 0
+
+- name: Apply raw extra 'set' commands for this port, if provided
+  ansible.builtin.command:
+    cmd: "ovs-vsctl set {{ item }}"
+  loop: "{{ ovs_setup_port_extra_set }}"
+  register: ovs_setup_port_extra_set_result
+  changed_when: true
+  failed_when: false
+  when: ovs_setup_port_valid | bool
+
+- name: Fail fast on this port's error, if configured
+  ansible.builtin.fail:
+    msg: "ovs_setup failed for port '{{ ovs_setup_port_name | default('unknown') }}': {{ ovs_setup_port_error }}"
+  when:
+    - not (ovs_setup_port_valid | bool)
+    - ovs_setup_fail_fast | bool
+
+- name: Warn about this port's error (fail-fast disabled)
+  ansible.builtin.debug:
+    msg: >-
+      Skipping port '{{ ovs_setup_port_name | default('unknown') }}':
+      {{ ovs_setup_port_error }}
+  when:
+    - not (ovs_setup_port_valid | bool)
+    - not (ovs_setup_fail_fast | bool)
+
+- name: Record this port's result in the aggregate summary
+  ansible.builtin.set_fact:
+    ovs_setup_port_results: "{{ ovs_setup_port_results + [ovs_setup_port_result] }}"
+  vars:
+    ovs_setup_port_result:
+      port: "{{ ovs_setup_port_name | default('unknown') }}"
+      bridge: "{{ ovs_setup_port_bridge | default('unknown') }}"
+      interface_type: "{{ ovs_setup_port_interface_type | default('') }}"
+      options: "{{ ovs_setup_port_options | default({}) }}"
+      valid: "{{ ovs_setup_port_valid }}"
+      error: "{{ ovs_setup_port_error }}"
+      changed: "{{ ovs_setup_port_changed }}"

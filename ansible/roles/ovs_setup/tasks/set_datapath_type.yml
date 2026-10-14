@@ -1,0 +1,40 @@
+---
+# tasks/set_datapath_type.yml
+#
+# Task 5: set datapath_type on a bridge, if a value was provided
+# (per-bridge override or the global ovs_datapath_type default). Included
+# from create_bridge.yml only when ovs_setup_bridge_datapath_type is
+# non-empty, so bridges with no opinion on datapath_type are left at
+# whatever OVS itself defaults to ('system').
+
+- name: Set datapath_type on the bridge, if it differs from the desired value (idempotent)
+  ansible.builtin.shell:
+    cmd: |
+      current="$(ovs-vsctl get bridge "{{ ovs_setup_bridge_name }}" datapath_type 2>/dev/null | tr -d '"')"
+      if [ "$current" != "{{ ovs_setup_bridge_datapath_type }}" ]; then
+        ovs-vsctl set bridge "{{ ovs_setup_bridge_name }}" datapath_type="{{ ovs_setup_bridge_datapath_type }}" && echo CHANGED
+      else
+        echo UNCHANGED
+      fi
+  register: ovs_setup_datapath_type_result
+  changed_when: "'CHANGED' in ovs_setup_datapath_type_result.stdout"
+  failed_when: false
+
+- name: Mark bridge invalid if setting datapath_type failed
+  ansible.builtin.set_fact:
+    ovs_setup_bridge_valid: false
+    ovs_setup_bridge_error: >-
+      failed to set datapath_type '{{ ovs_setup_bridge_datapath_type }}' on
+      '{{ ovs_setup_bridge_name }}':
+      {{ ovs_setup_datapath_type_result.stderr | default('unknown error') | trim }}.
+      This datapath type may require additional OVS build options (e.g.
+      DPDK support for 'netdev') or a vendor-specific OVS build/plugin
+      that is not present on this host.
+  when: ovs_setup_datapath_type_result.rc | default(0) != 0
+
+- name: Record datapath_type change
+  ansible.builtin.set_fact:
+    ovs_setup_bridge_changed: true
+  when:
+    - ovs_setup_bridge_valid | bool
+    - ovs_setup_datapath_type_result is changed

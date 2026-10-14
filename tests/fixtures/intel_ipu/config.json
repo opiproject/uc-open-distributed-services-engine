@@ -1,0 +1,15 @@
+{
+  "redfish_base": "https://imc.example.test/redfish/v1",
+  "imc_address": "imc.example.test",
+  "opi_endpoint": "https://opi.example.test",
+  "opi_mode": "mock",
+  "management_cli": null,
+  "password": "should-not-leak",
+  "mock_devices": [
+    {
+      "id": "intel-mock-1",
+      "model": "E2100",
+      "pci_address": "0000:17:00.0"
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+---
+# tasks/service_openvswitch.yml
+#
+# Starts and enables the Open vSwitch service using a per-OS-family service
+# name. Never fails the play on its own -- a failure here is reported via
+# debug so the caller can decide how to react (e.g. re-run after confirming
+# package installation succeeded).
+
+- name: Resolve Open vSwitch service name for this OS family
+  ansible.builtin.set_fact:
+    host_base_resolved_openvswitch_service: >-
+      {{ host_base_openvswitch_service_name_by_family.get(ansible_facts.os_family,
+         host_base_openvswitch_service_name_by_family['default']) }}
+
+- name: Enable and start Open vSwitch
+  ansible.builtin.service:
+    name: "{{ host_base_resolved_openvswitch_service }}"
+    state: started
+    enabled: true
+  register: host_base_openvswitch_service_result
+  failed_when: false
+
+- name: Warn if Open vSwitch could not be started or enabled
+  ansible.builtin.debug:
+    msg: >-
+      Could not start/enable service '{{ host_base_resolved_openvswitch_service }}':
+      {{ host_base_openvswitch_service_result.msg | default('unknown error') }}.
+      Verify the service name is correct for this distribution and that OVS
+      packages installed successfully (host_base_install_ovs: true).
+  when: host_base_openvswitch_service_result is failed

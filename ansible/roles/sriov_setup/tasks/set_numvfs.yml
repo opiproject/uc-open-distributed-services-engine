@@ -1,0 +1,94 @@
+---
+# tasks/set_numvfs.yml
+#
+# *** SAFETY-CRITICAL FILE -- see README.md "Safety notes" ***
+#
+# Writes to sysfs directly with `echo N > .../sriov_numvfs` (via shell,
+# not the `copy` module, since sysfs pseudo-files do not support the
+# atomic replace semantics the `copy` module relies on).
+#
+# The Linux kernel does not allow changing sriov_numvfs directly from one
+# non-zero value to a different non-zero value -- it must first be reset
+# to 0. Resetting to 0 destroys every existing VF on that PF (and anything
+# depending on them: running VMs, containers, representor/OVS bindings).
+# This file refuses to do that automatically unless
+# sriov_setup_allow_disruptive_reconfigure is explicitly set to true.
+
+- name: Read current sriov_numvfs for this PF
+  ansible.builtin.slurp:
+    src: "/sys/class/net/{{ sriov_setup_pf.pf_name }}/device/sriov_numvfs"
+  register: sriov_setup_numvfs_raw
+
+- name: Decode current sriov_numvfs value
+  ansible.builtin.set_fact:
+    sriov_setup_current_numvfs: "{{ (sriov_setup_numvfs_raw.content | b64decode | trim) | int }}"
+
+- name: No change needed -- sriov_numvfs already matches the requested value
+  ansible.builtin.debug:
+    msg: >-
+      '{{ sriov_setup_pf.pf_name }}' already has sriov_numvfs=
+      {{ sriov_setup_current_numvfs }}, matching the requested value.
+      No change made.
+  when: sriov_setup_current_numvfs == (sriov_setup_pf.num_vfs | int)
+
+- name: Refuse disruptive reconfiguration unless explicitly allowed
+  ansible.builtin.set_fact:
+    sriov_setup_pf_valid: false
+    sriov_setup_pf_error: >-
+      '{{ sriov_setup_pf.pf_name }}' currently has sriov_numvfs=
+      {{ sriov_setup_current_numvfs }} (non-zero) and the requested value
+      ({{ sriov_setup_pf.num_vfs }}) differs. Changing this requires first
+      writing 0 to sriov_numvfs, which destroys and recreates every
+      existing VF on this PF. This is refused by default because it is
+      disruptive to anything already using those VFs. Set
+      sriov_setup_allow_disruptive_reconfigure: true only after confirming
+      nothing depends on the current VFs (running VMs, containers,
+      representor/OVS bindings, etc.).
+  when:
+    - sriov_setup_current_numvfs != (sriov_setup_pf.num_vfs | int)
+    - sriov_setup_current_numvfs != 0
+    - not (sriov_setup_allow_disruptive_reconfigure | bool)
+
+- name: Reset sriov_numvfs to 0 before reconfiguring (disruptive, explicitly allowed)
+  ansible.builtin.shell:
+    cmd: "echo 0 > /sys/class/net/{{ sriov_setup_pf.pf_name }}/device/sriov_numvfs"
+  register: sriov_setup_reset_numvfs_result
+  changed_when: sriov_setup_reset_numvfs_result.rc == 0
+  failed_when: false
+  when:
+    - sriov_setup_pf_valid | bool
+    - sriov_setup_current_numvfs != (sriov_setup_pf.num_vfs | int)
+    - sriov_setup_current_numvfs != 0
+    - sriov_setup_allow_disruptive_reconfigure | bool
+
+- name: Mark PF invalid if resetting sriov_numvfs to 0 failed
+  ansible.builtin.set_fact:
+    sriov_setup_pf_valid: false
+    sriov_setup_pf_error: >-
+      resetting sriov_numvfs to 0 for '{{ sriov_setup_pf.pf_name }}' failed
+      before reconfiguration:
+      {{ sriov_setup_reset_numvfs_result.stderr | default('unknown error') }}
+  when:
+    - sriov_setup_reset_numvfs_result is defined
+    - sriov_setup_reset_numvfs_result.rc | default(0) != 0
+
+- name: Set sriov_numvfs to the requested value
+  ansible.builtin.shell:
+    cmd: "echo {{ sriov_setup_pf.num_vfs }} > /sys/class/net/{{ sriov_setup_pf.pf_name }}/device/sriov_numvfs"
+  register: sriov_setup_set_numvfs_result
+  changed_when: sriov_setup_set_numvfs_result.rc == 0
+  failed_when: false
+  when:
+    - sriov_setup_pf_valid | bool
+    - sriov_setup_current_numvfs != (sriov_setup_pf.num_vfs | int)
+
+- name: Mark PF invalid if setting sriov_numvfs failed
+  ansible.builtin.set_fact:
+    sriov_setup_pf_valid: false
+    sriov_setup_pf_error: >-
+      writing sriov_numvfs={{ sriov_setup_pf.num_vfs }} for
+      '{{ sriov_setup_pf.pf_name }}' failed:
+      {{ sriov_setup_set_numvfs_result.stderr | default('unknown error') }}
+  when:
+    - sriov_setup_set_numvfs_result is defined
+    - sriov_setup_set_numvfs_result.rc | default(0) != 0

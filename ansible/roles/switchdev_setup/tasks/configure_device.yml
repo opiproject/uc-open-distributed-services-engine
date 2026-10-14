@@ -1,0 +1,80 @@
+---
+# tasks/configure_device.yml
+#
+# Included once per item in switchdev_devices (see tasks/main.yml). The
+# current item is available as `switchdev_setup_device` via loop_control.
+# Each step can mark the device invalid via
+# switchdev_setup_device_valid/switchdev_setup_device_error; once invalid,
+# later steps in this file are skipped (all gated on
+# switchdev_setup_device_valid).
+
+- name: Reset per-device result tracking
+  ansible.builtin.set_fact:
+    switchdev_setup_device_valid: true
+    switchdev_setup_device_error: null
+    switchdev_setup_discovered_representors: []
+    switchdev_setup_vfs_unbound: false
+    switchdev_setup_previous_mode: null
+    switchdev_setup_current_mode_after: null
+
+- name: Normalize this device entry (resolve pf_name/pci_address/mode/vendor)
+  ansible.builtin.include_tasks: resolve_device.yml
+
+- name: Detect devlink path for this device
+  ansible.builtin.include_tasks: detect_devlink.yml
+  when: switchdev_setup_device_valid | bool
+
+- name: Display current devlink eswitch mode
+  ansible.builtin.include_tasks: show_eswitch_mode.yml
+  when: switchdev_setup_device_valid | bool
+
+- name: Optionally unbind VFs if required
+  ansible.builtin.include_tasks: unbind_vfs.yml
+  when:
+    - switchdev_setup_device_valid | bool
+    - require_vfs_unbound | bool
+
+- name: Set eswitch mode using devlink
+  ansible.builtin.include_tasks: set_eswitch_mode.yml
+  when: switchdev_setup_device_valid | bool
+
+- name: Verify representor ports appear
+  ansible.builtin.include_tasks: verify_representors.yml
+  when: switchdev_setup_device_valid | bool
+
+- name: Fail fast on this device's error, if configured
+  ansible.builtin.fail:
+    msg: >-
+      switchdev_setup failed for
+      '{{ switchdev_setup_resolved_identifier | default('unknown') }}':
+      {{ switchdev_setup_device_error }}
+  when:
+    - not (switchdev_setup_device_valid | bool)
+    - switchdev_setup_fail_fast | bool
+
+- name: Warn about this device's error (fail-fast disabled)
+  ansible.builtin.debug:
+    msg: >-
+      Skipping '{{ switchdev_setup_resolved_identifier | default('unknown') }}':
+      {{ switchdev_setup_device_error }}. Set switchdev_setup_fail_fast: true
+      to fail the whole play on this kind of error instead of skipping.
+  when:
+    - not (switchdev_setup_device_valid | bool)
+    - not (switchdev_setup_fail_fast | bool)
+
+- name: Record this device's result in the aggregate summary
+  ansible.builtin.set_fact:
+    switchdev_setup_all_results: "{{ switchdev_setup_all_results + [switchdev_setup_device_result] }}"
+  vars:
+    switchdev_setup_device_result:
+      identifier: "{{ switchdev_setup_resolved_identifier | default('unknown') }}"
+      pci_address: "{{ switchdev_setup_pci_address | default(omit) }}"
+      pf_name: "{{ switchdev_setup_pf_name | default(omit) }}"
+      requested_mode: "{{ switchdev_setup_target_mode | default(omit) }}"
+      previous_mode: "{{ switchdev_setup_previous_mode | default(omit) }}"
+      current_mode: "{{ switchdev_setup_current_mode_after | default(switchdev_setup_previous_mode) | default(omit) }}"
+      vendor_hook: "{{ switchdev_setup_vendor_key | default(omit) }}"
+      vfs_unbound: "{{ switchdev_setup_vfs_unbound }}"
+      valid: "{{ switchdev_setup_device_valid }}"
+      error: "{{ switchdev_setup_device_error }}"
+      representor_ports: "{{ switchdev_setup_discovered_representors }}"

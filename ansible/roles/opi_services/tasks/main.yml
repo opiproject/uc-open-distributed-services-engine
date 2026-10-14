@@ -1,0 +1,48 @@
+---
+# tasks/main.yml for opi_services (skeleton)
+#
+# Does not start an API server. Validates inputs and records TODOs.
+
+- name: Ensure Ansible facts are available
+  ansible.builtin.setup:
+  when: ansible_facts.os_family is not defined
+
+- name: Warn that opi_services is a skeleton
+  ansible.builtin.debug:
+    msg: >-
+      ansible/roles/opi_services is a skeleton. It will not install or
+      start an OPI API server. Set opi_services_backend and implement
+      kubernetes/opi/adapter vendor hooks before enabling
+      opi_services_install_adapter / opi_services_manage_service.
+
+- name: Validate opi_services_backend when set
+  ansible.builtin.assert:
+    that:
+      - opi_services_backend in ['', 'amd', 'nvidia', 'intel', 'marvell', 'simulated']
+    fail_msg: >-
+      opi_services_backend must be empty or one of amd, nvidia, intel,
+      marvell, simulated.
+  when: opi_services_backend is defined
+
+- name: Refuse TLS-disabled non-loopback listen (safety)
+  ansible.builtin.assert:
+    that:
+      - opi_services_listen in ['127.0.0.1', 'localhost', '::1']
+        or (opi_services_tls_enabled | bool)
+    fail_msg: >-
+      Refusing to configure a non-loopback OPI listen address without
+      opi_services_tls_enabled. The management API must not be exposed
+      on the tenant/VF network (see roles-and-trust-boundary.md).
+
+# TODO: copy kubernetes/opi/adapter to opi_services_adapter_dest when
+# opi_services_install_adapter is true.
+- name: Skip adapter install (not implemented)
+  ansible.builtin.debug:
+    msg: "TODO: install adapter from {{ opi_services_adapter_src }}"
+  when: opi_services_install_adapter | bool
+
+# TODO: systemd unit for python3 -m ... once a __main__ exists.
+- name: Skip service management (not implemented)
+  ansible.builtin.debug:
+    msg: "TODO: enable {{ opi_services_service_name }} for backend {{ opi_services_backend }}"
+  when: opi_services_manage_service | bool

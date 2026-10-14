@@ -1,0 +1,179 @@
+# ODSE VM-to-VM single-DPU lab config — SCHEMA REFERENCE (not a runnable file)
+#
+# This describes the structure that config/lab-<vendor>-vm2vm.example.yaml
+# files and your own real config/lab-vm2vm.yaml (gitignored) must follow.
+# It documents every field's type, whether it is required, and its
+# default. It is intentionally not meant to be copied directly — copy one
+# of the lab-<vendor>-vm2vm.example.yaml files instead (see
+# config/README-lab-vm2vm.md).
+#
+# Loaded by plugins/base/vm2vm_config.py (load_vm2vm_config /
+# validate_vm2vm_config) and consumed by tools/labctl.py.
+#
+# Type legend: string | int | bool | list | map | enum(a|b|c)
+# "required" fields with no default must be present and non-null for
+# validate-config to pass. "optional" fields may be omitted or null.
+
+schema: odse-lab-vm2vm/v1alpha1        # required, string, must be exactly this value
+
+host:
+  name: string                          # required — informational label only
+  management_interface: string          # required — netdev name; NEVER touched by labctl (safety.forbid_management_interface_changes)
+  ssh_user: string                      # required — user for host-side SSH-driven steps (VM image copy, guest network setup)
+  preserve_interfaces: [string]         # optional, list — additional netdevs labctl must never modify, beyond management_interface and the DPU uplink
+  os_family: enum(RedHat|Debian|Suse|unknown)   # required — informs which ansible/roles/host_base package/service names apply
+  role: [string]                        # optional — DPU-mode: kvm, qemu, libvirt, vf-passthrough
+
+vendor:
+  type: enum(nvidia-bluefield|intel-ipu|marvell-octeon|amd-pensando)  # required
+  backend_module: string                # optional, null default
+  profile: string                       # optional — NVIDIA default is nvidia-bluefield-dpu-mode
+                                         # when omitted. Advanced: nvidia-connectx-host-switchdev.
+
+# NVIDIA BlueField DPU-mode placement (required when vendor.profile is
+# nvidia-bluefield-dpu-mode or when vendor.type is nvidia-bluefield and
+# profile is omitted). Host OVS must not own VF representors.
+nvidia:
+  mode: enum(dpu|host-switchdev)        # dpu = OVS/OVS-DOCA on BlueField Arm
+  ovs_location: enum(dpu|host)
+  representor_location: enum(dpu|host)
+  datapath: enum(ovs-doca|ovs-tc|system)
+  allow_host_ovs_for_forwarding: bool   # must be false in DPU mode
+
+host_forwarding_control:
+  enabled: bool                         # must be false in nvidia-bluefield-dpu-mode
+
+dpu:
+  pf_name: string                       # required — PF netdev used for the two lab VFs
+  pf_pci: string                        # required — PCI address of that PF (0000:xx:xx.x)
+  uplink_name: string                   # optional
+  uplink_pci: string                    # optional
+  management_ip: string                 # optional — DPU/IPU management-plane address
+  ssh_user: string                      # optional — DPU OS SSH user for remote_execution
+  ssh_key_path: string                  # optional, null default — private key path for remote_execution's ssh
+                                         # calls to the DPU/IPU management OS (plugins/base/remote.py ssh_params).
+                                         # Distinct from vms[].ssh_key_path below (that one is per-guest-VM).
+                                         # Falls back to ssh's own default identity resolution if omitted.
+  command_timeout_seconds: int          # optional, default 30 — per-SSH-command execution timeout for
+                                         # remote_execution calls to the DPU. discover-representors makes 3
+                                         # *sequential* real SSH round trips when representor_mapping.location
+                                         # is dpu and remote_execution.dry_run_default is false (ip -d link
+                                         # show / devlink port show / ovs-vsctl show); labctl sizes that
+                                         # subprocess's own timeout as 3x this value + headroom automatically.
+                                         # Raise this if discover-representors times out on a slower/higher-
+                                         # latency management link even though `ssh <dpu>` works fine by hand.
+  ssh_port: int                         # optional, default 22
+  num_vfs: int                          # required — must be exactly 2 for this use case
+  enable_switchdev: bool                 # host-side eswitch; false in DPU-mode (DPU owns representors)
+  enable_ovs_hw_offload: bool            # requested offload on the OVS owner (DPU in DPU-mode)
+  preferred_datapath: enum(system|netdev|doca|dao|opi|discovery)
+  role: [string]                        # DPU-mode: representor-owner, ovs-owner, forwarding-owner
+  opi_endpoint: string                  # optional — intel-ipu
+  redfish_endpoint: string              # optional — intel-ipu
+
+dpu_forwarding_control:
+  enabled: bool                         # must be true in nvidia-bluefield-dpu-mode
+
+representor_mapping:                    # optional — defaults from nvidia.representor_location / profile
+  location: enum(dpu|host)              # dpu for nvidia-bluefield-dpu-mode; host only for advanced host-switchdev
+  strategy: enum(nvidia-portname|sysfs-devlink)
+  require_high_confidence: bool         # true in DPU mode: configure-forwarding fails on low/medium/unknown
+
+ovs:
+  bridge: string                        # required — bridge name (e.g. br-int)
+  datapath_type: string                 # optional — passed through to ovs_setup/OVS backend; empty/null = OVS default
+  fail_mode: enum(standalone|secure|null)  # optional
+  ports: [string]                       # optional, list — extra static ports beyond the two representors labctl discovers/attaches
+
+vms:                                    # required, list, exactly 2 entries for this use case; labctl refuses != 2
+  - name: string                        # required — libvirt domain name
+    image: string                       # required — path to a base qcow2/raw image (see qemu/images/README.md); never committed to git
+    memory_mb: int                      # required
+    vcpus: int                          # required
+    vf_index: int                       # required — 0 or 1; must be unique across the two vms[] entries and < dpu.num_vfs
+    vf_pci: string                      # optional, null default — filled in by labctl from discovery if omitted (see prepare-vfs/discover-representors)
+    mac: string                         # optional — libvirt-visible guest MAC; auto-generated if omitted
+    ip_cidr: string                     # required — guest IP/prefix for configure-vm-ips (documentation-range addresses in examples)
+    gateway: string                     # optional — only meaningful if traffic crosses a router; usually null for direct VM-to-VM
+    ssh_user: string                    # required — guest SSH user for configure-vm-ips / run-traffic
+    management_ip: string               # optional, null default — address of the VM's *management* NIC (the
+                                         # libvirt 'default' network interface in
+                                         # qemu/libvirt-xml/vm-vfio-template.xml), used by labctl for SSH.
+                                         # Distinct from ip_cidr (the VF-under-test address). If omitted,
+                                         # labctl falls back to `virsh domifaddr <name>`; it never guesses one.
+                                         # Missing both → GUEST_SSH_REQUIRED.
+    ssh_key_path: string                # optional, null default — private key path for every ssh call labctl
+                                         # makes to *this* guest (verify-vms, configure-vm-ips, run-traffic). If
+                                         # omitted, ssh falls back to its own default identity resolution
+                                         # (ssh-agent / ~/.ssh/config / ~/.ssh/id_*) -- if that default isn't the
+                                         # key you actually authorized into the guest, every stage above fails
+                                         # with "Permission denied (publickey)" even though `ssh -i <path>
+                                         # user@host` works fine by hand. Independent of dpu.ssh_key_path (that
+                                         # one is for the DPU/IPU management OS, not the guest VMs).
+
+create_vms:                             # optional
+  start: bool                           # default true — virsh start after define
+  wait_for_boot: bool                   # default false — do not wait unless explicitly requested
+
+traffic:
+  type: enum(ping|iperf3|"ping and iperf3")   # required
+  duration_seconds: int                  # required — iperf3 test duration
+  iperf_parallel_streams: int            # required — iperf3 -P value
+  packet_size: int                       # optional — iperf3 -l value; null = tool default
+
+validation:
+  collect_ovs_flows: bool                 # required
+  collect_tc_filters: bool                # required
+  collect_ethtool_stats: bool             # required
+  collect_cpu_stats: bool                 # required
+  collect_vendor_telemetry: bool          # required
+
+safety:
+  dry_run_default: bool                   # required — must be true in every example file; a real lab file may set false
+  require_apply: bool                     # required — must be true; labctl refuses to relax this from a config file
+  forbid_management_interface_changes: bool   # required — must be true; labctl refuses to relax this from a config file
+  cleanup_on_failure: bool                # required — whether labctl should best-effort run cleanup stages after a failed --apply stage
+
+forwarding:                             # required — see docs/architecture/forwarding-intent-model.md
+  name: string                          # required — forwarding intent name
+  type: enum(l2-vm-to-vm|l2-segment)    # required — l2-segment supports >2 endpoints (future VM3+ use case)
+  mode: enum(bridge)                    # required — how endpoints are connected; 'bridge' is the only mode implemented today
+  endpoints:                            # required, list, >= 2 entries
+    - name: string                      # required — endpoint label (not a netdev name)
+      vm: string                        # required — must match a vms[].name entry
+      vf_index: int                     # required — must match that vm's vms[].vf_index
+      vf_pci: string                    # optional, null default — filled in from discovery if omitted
+      representor: string               # optional, null default — filled in from discovery if omitted; never hand-guessed
+      mac: string                       # optional
+      ip_cidr: string                   # optional — should match the corresponding vms[].ip_cidr
+  policy:
+    action: enum(allow)                 # required — 'allow' is the only implemented action today
+    bidirectional: bool                 # required
+  offload:
+    requested: bool                     # required — whether the backend should attempt hw-offload
+    fallback_to_software: bool           # required
+    require_confirmed_offload: bool      # required — if true, validate-offload treats "probable" as insufficient
+  explicit_flows:
+    enabled: bool                        # required — if true, backend adds explicit bidirectional OpenFlow rules
+                                         # instead of relying on L2 learning alone (NVIDIA backend only today)
+
+# Note: plugins.base.models.ForwardingIntent also carries two fields not
+# present in this YAML shape, populated by labctl rather than the user:
+#   bridge: str          — copied from ovs.bridge when labctl builds the intent
+#   details: map          — free-form passthrough (e.g. datapath_type hints)
+
+# Marvell DAO (optional unless vendor.type=marvell-octeon):
+# marvell.mode: dao-ovs-offload
+# dpdk.hugepages_required / dao.ovs_offload_binary
+# representor_mapping.model: dpdk
+
+# Intel OPI (optional unless vendor.type=intel-ipu):
+# intel.mode: opi-dpu-operator
+# intel.vm_to_vm_forwarding_default: discovery-required
+# opi.endpoint / dpu_operator.kubeconfig / ipu.management_ip
+# network_function: used only by `labctl intel-nf` (not VM-to-VM)
+
+# AMD Pensando (optional unless vendor.type=amd-pensando):
+# amd_pensando.mode: discovery-first
+# amd_pensando.require_ionic: true; require_representors/switchdev/ovs default false
+

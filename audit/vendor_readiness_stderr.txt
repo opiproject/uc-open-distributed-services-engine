@@ -1,0 +1,2 @@
+intel_ipu.dpu_operator: will not apply CRs or Helm
+intel_ipu.dpu_operator: will not apply CRs or Helm

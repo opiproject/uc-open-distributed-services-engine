@@ -1,0 +1,65 @@
+# Placeholder Helm values — HARDWARE DPU mode.
+#
+# Apply (once keys are real) on physical DPU-capable hosts + DPU OS.
+# Start from host-cluster/values.yaml + dpu-cluster/values.yaml, then
+# add the hardware-only flags below. Do not merge simulated/ values.
+#
+# Companion: ../README.md §6–10. Vendor matrix is discovery-first except
+# NVIDIA OVN-Kubernetes DPU mode (likely, not ODSE-certified).
+#
+# chart:      <OVN_KUBERNETES_CHART>
+# version:    <OVN_KUBERNETES_CHART_VERSION>
+# profile:    hardware
+# vendor:     <VENDOR_TRACK>    # nvidia_bluefield | intel_ipu | amd_pensando | marvell_octeon
+
+# ---------------------------------------------------------------------------
+# Shared hardware flags (both clusters consume the pairing).
+# ---------------------------------------------------------------------------
+# hardware:
+#   requireSwitchdev: true
+#   requireRepresentors: true
+#   vfToRepresentorMapTool: tools/topology-discovery/vf_to_representor_map.py
+#   offloadChecker: tools/offload-checker/ovs_offload_checker.py
+
+# ovs:
+#   hwOffload: true
+#   datapathType: system                  # override per vendor if needed
+#   # vendorDatapathType: <OVS_DATAPATH_TYPE>  # e.g. doca — unset by default
+
+# sriovDevicePlugin:
+#   enabled: true
+#   resourceName: <SRIOV_RESOURCE_NAME>
+#   numVfs: <NUM_VFS>
+
+# ---------------------------------------------------------------------------
+# NVIDIA BlueField — fill only after lab confirmation.
+# ---------------------------------------------------------------------------
+# nvidia:
+#   ovnKubernetesDoc: <NVIDIA_OVN_K8S_DOC_URL>
+#   ovsDoca: false                        # ODSE baseline is kernel OVS
+#   hostPfLegacy: <true|false>            # often true in DPU mode; confirm
+#   sriovResourceName: <NVIDIA_SRIOV_RESOURCE_NAME>
+
+# ---------------------------------------------------------------------------
+# Intel IPU
+# ---------------------------------------------------------------------------
+# intel:
+#   representorOwner: <INTEL_REPRESENTOR_OWNER>   # ipu-os | host
+#   notes: <INTEL_OVN_K8S_VALUES_NOTES>
+
+# ---------------------------------------------------------------------------
+# AMD Pensando — likely N/A until SR-IOV/representors are proven.
+# ---------------------------------------------------------------------------
+# pensando:
+#   sriovRepresentorAvailable: <PENSANDO_SRIOV_REPRESENTOR_AVAILABLE>
+#   applicable: false
+
+# ---------------------------------------------------------------------------
+# Marvell OCTEON — OVN-Kubernetes DPU mode rated future.
+# ---------------------------------------------------------------------------
+# marvell:
+#   cniBackend: <MARVELL_CNI_BACKEND>
+#   dpuKubernetesAvailable: <MARVELL_DPU_K8S_AVAILABLE>
+#   applicable: false
+
+{}

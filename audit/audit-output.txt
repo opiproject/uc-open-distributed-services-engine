@@ -1,0 +1,460 @@
+I started the source-tree audit from the uploaded open-dse-repo-audit.zip and inspected the extracted repo directly. The repo is substantially implemented, but it is not yet clean enough for hardware --apply because the test suite has failures and there are a few readiness/consistency issues to resolve first. The zip was accessible as open-dse-repo-audit.zip.
+
+Executive verdict
+Can you start trying the initial use cases?
+
+Yes, for dry-run and discovery. Not yet for hardware --apply.
+
+Current state:
+
+Safe now:
+  - source-tree review
+  - dry-run discovery
+  - preflight readiness
+  - config validation
+  - run-all-safe dry-run
+  - vendor readiness matrix generation
+
+Not safe yet:
+  - hardware --apply
+  - real VF creation
+  - real DPU-side OVS mutation
+  - real VM VF assignment
+
+
+Reason: the repo’s tests are not green. I ran:
+
+python -m pytest -q tests/unit tests/vendor tests/vendor-certification
+
+
+Result:
+
+350 passed
+3 failed
+6 subtests passed
+
+
+The failing test log is available here: pytest audit output.
+
+1. Source-tree coverage audit
+
+The extracted repo contains the major expected areas:
+
+config/
+docs/
+plugins/
+qemu/
+tests/
+tools/
+ci/
+
+
+The file list includes the expected configs, architecture docs, operations docs, vendor-readiness docs, tests, and tools such as labctl.py, preflight_readiness.py, vendor_readiness_matrix.py, lab_state.py, remote_exec.py, report_generator.py, vf_to_representor_map.py, and vendor plugin directories. I generated a file listing here: source-tree file list.
+
+From a file-presence perspective, the repo is no longer just prompts/docs. It has meaningful implementation artifacts:
+
+tools/labctl.py
+tools/preflight_readiness.py
+tools/vendor_readiness_matrix.py
+tools/lab_state.py
+tools/remote_exec.py
+tools/report_generator.py
+plugins/nvidia_bluefield/
+plugins/marvell_octeon/
+plugins/intel_ipu/
+plugins/amd_pensando/
+tests/unit/
+tests/vendor/
+tests/vendor-certification/
+
+
+That is good.
+
+2. Test failures that must be fixed
+P0-1: ForwardingIntent datapath mismatch
+
+Failing test:
+
+tests/unit/test_forwarding_intent.py::BuildForwardingIntentTests::test_intent_carries_bridge_and_datapath_details
+
+
+Observed:
+
+Expected: datapath_type == system
+Actual:   datapath_type == doca
+
+
+This likely means the test still assumes a generic/host OVS datapath, while the final NVIDIA default profile now uses DPU-side OVS-DOCA / doca datapath. This is probably a test fixture drift, not necessarily a product bug, but it must be resolved.2.txt
+
+Fix direction
+
+Either:
+
+Option A:
+  Update the test fixture to expect doca for the NVIDIA DPU-mode config.
+
+Option B:
+  Split generic ForwardingIntent tests from NVIDIA-specific DPU-mode tests.
+
+
+My recommendation: Option B. Keep one generic fixture expecting system, and a separate NVIDIA DPU-mode fixture expecting doca.
+
+P0-2: IOMMU readiness semantics are wrong or test is stale
+
+Failing test:
+
+tests/unit/test_vf_assignment_plan.py::VfAssignmentPlanTests::test_iommu_from_samples_does_not_invent_ready
+
+
+Observed:
+
+Expected: ready is None
+Actual:   ready is False
+
+
+This matters. If sysfs is absent in a test/container environment, that is unknown, not proof of “not ready.” For a safety-first hardware framework, unknown should remain None or UNKNOWN, not False, unless the code has actual host evidence.2.txt
+
+Fix direction
+
+I recommend restoring the safer contract:
+
+ready = None
+status = "UNKNOWN"
+
+
+when the sysfs root or IOMMU evidence cannot be inspected.
+
+P0-3: NVIDIA configure-forwarding test still sees host path
+
+Failing test:
+
+tests/vendor/nvidia/test_configure_forwarding.py::NvidiaConfigureForwardingTests::test_two_endpoint_bridge_forwarding_is_planned
+
+
+Observed:
+
+Expected: NVIDIA BlueField/ConnectX E-Switch
+Actual:   NVIDIA BlueField/ConnectX E-Switch (host path)
+
+
+This is the most important failure because it touches the ambiguity we spent time removing. For the default NVIDIA profile, the path must be:
+
+nvidia-bluefield-dpu-mode
+OVS/OVS-DOCA on DPU
+representors on DPU
+host OVS forwarding disabled
+
+
+The test result shows at least one test/backend path is still defaulting or falling into the host path.2.txt
+
+Fix direction
+
+Update the NVIDIA backend/test fixture so default configure-forwarding uses:
+
+control_entity:
+  labctl -> nvidia backend -> DPU-side OVS/OVS-DOCA -> BlueField E-Switch
+
+forwarding_entity:
+  NVIDIA BlueField/ConnectX E-Switch
+
+
+If host path is needed, it should only appear under:
+
+nvidia-connectx-host-switchdev
+
+3. Preflight readiness audit
+
+I ran:
+
+python tools/preflight_readiness.py --config config/lab-nvidia-vm2vm.example.yaml --json
+
+
+Result:
+
+readiness_status: READY_FOR_DRY_RUN_ONLY
+blocking_issues: []
+
+
+That is good for dry-run, but not hardware apply. The preflight output has important warnings:
+
+placeholder fields remain: host.name, dpu.pf_name, dpu.pf_pci
+VM image paths are placeholders
+cleanup does not yet target DPU-side OVS
+
+
+The preflight output is here: NVIDIA preflight output.
+
+Interpretation
+
+The example config is correctly treated as dry-run only. Before any hardware run, you need a real lab config replacing placeholders:
+
+host.name
+host.management_interface
+dpu.management_ip
+dpu.ssh_user
+dpu.ssh_key_path
+dpu.pf_name
+dpu.pf_pci
+vm image paths
+
+4. labctl validate-config audit
+
+I ran:
+
+python tools/labctl.py vm2vm validate-config --config config/lab-nvidia-vm2vm.example.yaml --json
+
+
+It completed successfully and produced a DPU-side OVS validation plan using remote SSH dry-run commands. That is aligned with the desired NVIDIA DPU-mode model. The output is here: labctl validate-config output, and the associated log is here: labctl validate-config log.
+
+Concern
+
+The log also shows local OVS bridge planning commands:
+
+ovs-vsctl --may-exist add-br br-int
+ovs-vsctl set bridge br-int datapath_type=doca
+
+
+This is concerning in NVIDIA DPU mode. In that profile, host OVS should not be the forwarding owner. The DPU-side OVS/OVS-DOCA should own bridge/representor forwarding.
+
+This needs inspection
+
+There are two possibilities:
+
+Benign:
+  These local commands are generic dry-run artifacts but not used in the NVIDIA DPU-mode path.
+
+Bug:
+  prepare-ovs/configure-forwarding still plans host-side OVS changes even when nvidia.mode == dpu.
+
+
+Until this is confirmed, I would not run --apply.
+
+5. run-all-safe dry-run audit
+
+I ran:
+
+python tools/labctl.py vm2vm run-all-safe --config config/lab-nvidia-vm2vm.example.yaml --dry-run --json
+
+
+It returned successfully and showed that destructive stages were held in dry-run. The output and logs are here: run-all-safe JSON, run-all-safe log.
+
+Observations:
+
+Dry-run flow is wired.
+Destructive operations are held.
+DPU-side remote SSH commands are planned.
+Some local discovery commands show command not found because the audit container does not have tools like lspci, devlink, or ip.
+NVIDIA SR-IOV is still logged as a stub/planned destructive sysfs write, not a real hardware operation in the test environment.3.err
+Interpretation
+
+The dry-run workflow exists and is useful, but hardware readiness still depends on:
+
+real lab host
+real DPU management IP
+real PF and PCI values
+real VM images
+green tests
+DPU-side cleanup
+resolution of local OVS planning ambiguity
+
+6. Cross-vendor readiness matrix audit
+
+I ran:
+
+python tools/vendor_readiness_matrix.py --configs config/*.yaml --json --output /mnt/data/vendor_readiness_matrix.json
+
+
+The generated matrix reports:
+
+AMD Pensando:
+  GO_FOR_DISCOVERY_ONLY
+
+Intel IPU:
+  GO_FOR_DISCOVERY_ONLY
+
+Marvell OCTEON:
+  BLOCKED_MISSING_VENDOR_RUNTIME
+
+NVIDIA BlueField:
+  GO_FOR_HARDWARE_DRY_RUN
+
+
+The matrix output is here: vendor readiness matrix. The stderr log only showed Intel DPU Operator warnings such as “will not apply CRs or Helm,” which is consistent with dry-run/skeleton behavior: vendor readiness stderr.
+
+Interpretation
+
+This is aligned with the intended vendor strategy:
+
+NVIDIA:
+  First hardware dry-run target
+
+Marvell:
+  Blocked until DAO/DPDK runtime is present
+
+Intel:
+  Discovery/API/operator path only, not VM-to-VM assumed
+
+AMD:
+  Discovery-only until forwarding control path is proven
+
+
+This is good and avoids overclaiming.
+
+7. Documentation alignment audit
+
+From the file list, the expected documentation families exist:
+
+docs/architecture/
+docs/operations/
+docs/vendor-readiness/
+docs/test-plan/
+README.md
+
+
+The file list includes key docs such as:
+
+docs/architecture/forwarding-intent-model.md
+docs/architecture/nvidia-bluefield-control-placement.md
+docs/architecture/intel-ipu-control-model.md
+docs/operations/first-run-nvidia-bluefield-dpu-mode.md
+docs/operations/preflight-readiness.md
+docs/operations/cross-vendor-readiness-matrix.md
+docs/operations/marvell-dao-readiness.md
+docs/operations/intel-ipu-readiness.md
+docs/operations/amd-pensando-readiness.md
+
+
+That suggests the documentation set is present.4.txt
+
+Documentation is mostly aligned, but not fully proven
+
+Because tests still fail around NVIDIA default path, I would not yet claim “fully aligned.” The docs may be right, but one test/backend path still returns “host path,” so there is remaining drift somewhere.2.txt
+
+Required doc drift check after fixes
+
+Run:
+
+grep -R "host OVS" -n README.md docs config plugins tools || true
+grep -R "nvidia-bluefield-dpu-mode" -n README.md docs config plugins tools
+grep -R "allow_host_ovs_for_forwarding" -n config plugins tools docs
+grep -R "discovery-first" -n docs config plugins tools
+grep -R "DISCOVERY_REQUIRED" -n plugins tools tests docs
+
+
+The goal is not to remove all “host OVS” mentions, because the advanced host-switchdev profile is valid. The goal is to ensure no doc says host OVS is default for NVIDIA BlueField DPU mode.
+
+8. Gap assessment against the initial use cases
+Use cases covered for dry-run
+
+These are covered enough for dry-run:
+
+1. Discover all vendors
+2. Generate capability report
+3. Validate lab config
+4. Full VM-to-VM dry-run
+5. Vendor readiness matrix
+6. NVIDIA DPU-mode preflight
+7. ForwardingIntent model
+8. Evidence/report framework
+9. Cleanup framework
+
+Use cases not yet safe for hardware apply
+
+These are not safe until P0 issues are fixed:
+
+1. Real VF creation
+2. Real DPU-side OVS mutation
+3. Real VM creation and VF assignment
+4. Real configure-forwarding
+5. Real traffic run
+6. Real cleanup
+
+9. Priority fix list
+P0: Fix the 3 failing tests
+
+Do this first.
+
+P0-1: Fix ForwardingIntent datapath mismatch.
+P0-2: Fix IOMMU unknown vs false semantics.
+P0-3: Fix NVIDIA configure-forwarding default path.
+
+
+Until tests are green, do not run hardware --apply.
+
+P0: Resolve local OVS planning ambiguity
+
+Investigate why labctl validate-config / run-all-safe logs show local ovs-vsctl add-br br-int and datapath_type=doca.
+
+In NVIDIA DPU mode, expected behavior is:
+
+Host:
+  no forwarding OVS ownership
+
+DPU:
+  OVS/OVS-DOCA bridge and representor ownership
+
+
+If the local OVS command is just a generic planning artifact, document/suppress it. If it is actually part of the path, fix it.
+
+P1: Fix or verify DPU-side cleanup
+
+Preflight says:
+
+cleanup does not yet target DPU-side OVS
+
+
+That is a real warning. Either the preflight check is stale, or cleanup is incomplete. Before hardware apply, DPU-side cleanup must cover:
+
+DPU-side OVS flows
+DPU-side OVS bridge
+DPU-side representor ports
+only lab-owned objects
+
+P1: Replace placeholders with real config
+
+The example config is fine for dry-run, but hardware requires a copied real file, for example:
+
+config/lab-nvidia-vm2vm.local.yaml
+
+
+with real:
+
+host.name
+host.management_interface
+dpu.management_ip
+dpu.ssh_user
+dpu.ssh_key_path
+dpu.pf_name
+dpu.pf_pci
+VM image paths
+
+10. Final go/no-go
+Current status
+Dry-run status:
+  GO, with caveats.
+
+Hardware --apply status:
+  NO-GO.
+
+Hardware apply becomes possible after
+1. All tests pass.
+2. NVIDIA path no longer returns host path under default DPU profile.
+3. Local OVS planning ambiguity is resolved.
+4. DPU-side cleanup warning is fixed or proven stale.
+5. Real lab config replaces placeholders.
+6. preflight_readiness.py returns READY with real config.
+7. vendor_readiness_matrix.py still marks NVIDIA GO_FOR_HARDWARE_DRY_RUN.
+8. labctl run-all-safe dry-run succeeds with the real config.
+
+My recommendation
+
+Fix the three failing tests and the local OVS ambiguity first. Then rerun:
+
+python -m pytest -q tests/unit tests/vendor tests/vendor-certification
+python tools/preflight_readiness.py --config config/lab-nvidia-vm2vm.local.yaml --json
+python tools/labctl.py vm2vm validate-config --config config/lab-nvidia-vm2vm.local.yaml --json
+python tools/labctl.py vm2vm run-all-safe --config config/lab-nvidia-vm2vm.local.yaml --dry-run --json
+python tools/vendor_readiness_matrix.py --configs config/*.yaml --json --output tests/results/vendor-readiness-matrix.json
+
+
+Once those are clean, you can proceed with the staged NVIDIA BlueField DPU-mode hardware run.

@@ -1,0 +1,76 @@
+---
+# tasks/checks_iommu.yml
+#
+# Conservative, read-only check of the running kernel command line for
+# IOMMU-related parameters. x86 IOMMU enablement differs by CPU vendor
+# (Intel vs AMD); non-x86 platforms (e.g. aarch64 SMMU) are not yet
+# supported by this check and fall back to an explicit placeholder message
+# rather than a guess -- see defaults/main.yml host_base_iommu_params_by_vendor.
+
+- name: Read kernel command line
+  ansible.builtin.slurp:
+    src: /proc/cmdline
+  register: host_base_proc_cmdline_raw
+
+- name: Decode kernel command line content
+  ansible.builtin.set_fact:
+    host_base_kernel_cmdline: "{{ host_base_proc_cmdline_raw.content | b64decode }}"
+
+- name: Detect CPU vendor from gathered facts
+  ansible.builtin.set_fact:
+    host_base_detected_cpu_vendor: >-
+      {{ 'intel' if (ansible_facts.processor | default([]) | join(' ')) is search('GenuineIntel')
+         else ('amd' if (ansible_facts.processor | default([]) | join(' ')) is search('AuthenticAMD')
+         else 'unknown') }}
+
+- name: Resolve expected IOMMU kernel command-line parameters for this CPU vendor
+  ansible.builtin.set_fact:
+    host_base_expected_iommu_params: "{{ host_base_iommu_params_by_vendor.get(host_base_detected_cpu_vendor, []) }}"
+
+- name: Placeholder - IOMMU/SMMU verification not implemented for this CPU vendor/architecture
+  ansible.builtin.debug:
+    msg: >-
+      Detected CPU vendor '{{ host_base_detected_cpu_vendor }}' on architecture
+      '{{ ansible_facts.architecture | default('unknown') }}'. This role does not
+      yet know the expected IOMMU/SMMU enablement mechanism for this
+      combination (ARM-based platforms typically use a firmware/device-tree
+      configured SMMU rather than an x86-style kernel command-line flag).
+      This is a placeholder: add an entry to host_base_iommu_params_by_vendor
+      once this has been confirmed for the target platform, or verify SMMU
+      enablement manually.
+  when: host_base_expected_iommu_params | length == 0
+
+- name: Determine which expected IOMMU parameters are missing from the kernel command line
+  ansible.builtin.set_fact:
+    host_base_iommu_params_missing: >-
+      {{ host_base_expected_iommu_params
+         | reject('in', host_base_kernel_cmdline.split(' '))
+         | list }}
+  when: host_base_expected_iommu_params | length > 0
+
+- name: Report IOMMU kernel command line status
+  ansible.builtin.debug:
+    msg: >-
+      Kernel command line: "{{ host_base_kernel_cmdline }}".
+      Expected IOMMU parameters for vendor '{{ host_base_detected_cpu_vendor }}':
+      {{ host_base_expected_iommu_params }}. Missing: {{ host_base_iommu_params_missing }}.
+      Missing parameters typically require a bootloader configuration change
+      (e.g. GRUB_CMDLINE_LINUX) and a reboot to take effect -- this role does
+      not modify the bootloader.
+  when: host_base_expected_iommu_params | length > 0
+
+- name: Fail when required IOMMU parameters are missing
+  ansible.builtin.assert:
+    that:
+      - host_base_iommu_params_missing | length == 0
+    fail_msg: >-
+      Expected IOMMU kernel command-line parameters are missing:
+      {{ host_base_iommu_params_missing }}. SR-IOV VF isolation and VFIO
+      passthrough will likely not function correctly without them. Add the
+      missing parameters to the bootloader configuration and reboot, or set
+      host_base_fail_on_missing_iommu: false to only warn instead of failing
+      the play.
+    success_msg: "All expected IOMMU kernel command-line parameters are present."
+  when:
+    - host_base_expected_iommu_params | length > 0
+    - host_base_fail_on_missing_iommu | bool

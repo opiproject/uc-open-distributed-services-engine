@@ -1,0 +1,119 @@
+---
+# tasks/set_eswitch_mode.yml
+#
+# Task 4: set the devlink eswitch mode for this device, if it does not
+# already match the target. Applies vendor hooks (see
+# switchdev_setup_vendor_hooks in defaults/main.yml) selected via this
+# device's 'vendor' key.
+
+- name: No change needed -- eswitch mode already matches the target
+  ansible.builtin.debug:
+    msg: >-
+      '{{ switchdev_setup_resolved_identifier }}' already has eswitch
+      mode '{{ switchdev_setup_previous_mode }}', matching the requested
+      target. No change made.
+  when: switchdev_setup_previous_mode == switchdev_setup_target_mode
+
+- name: Resolve vendor hook set for this device
+  ansible.builtin.set_fact:
+    switchdev_setup_active_vendor_hooks: >-
+      {{ switchdev_setup_vendor_hooks[switchdev_setup_vendor_key]
+         if switchdev_setup_vendor_key in switchdev_setup_vendor_hooks
+         else switchdev_setup_vendor_hooks['generic'] }}
+  when: switchdev_setup_previous_mode != switchdev_setup_target_mode
+
+- name: Warn if the selected vendor hook key is not defined
+  ansible.builtin.debug:
+    msg: >-
+      vendor hook key '{{ switchdev_setup_vendor_key }}' is not defined
+      in switchdev_setup_vendor_hooks; falling back to the 'generic' hook
+      set (no extra pre/post commands or eswitch arguments). Define it in
+      switchdev_setup_vendor_hooks if this device needs vendor-specific
+      handling.
+  when:
+    - switchdev_setup_previous_mode != switchdev_setup_target_mode
+    - switchdev_setup_vendor_key not in switchdev_setup_vendor_hooks
+
+- name: Run vendor-specific pre-mode-change commands
+  ansible.builtin.command:
+    cmd: "{{ item }}"
+  loop: "{{ switchdev_setup_active_vendor_hooks.pre_mode_change_commands | default([]) }}"
+  register: switchdev_setup_pre_hook_result
+  changed_when: true
+  when: switchdev_setup_previous_mode != switchdev_setup_target_mode
+
+- name: Set devlink eswitch mode
+  ansible.builtin.command:
+    cmd: >-
+      devlink dev eswitch set {{ switchdev_setup_devlink_handle }}
+      mode {{ switchdev_setup_target_mode }}
+      {{ switchdev_setup_active_vendor_hooks.eswitch_set_extra_args | default('') }}
+  register: switchdev_setup_eswitch_set_result
+  changed_when: switchdev_setup_eswitch_set_result.rc == 0
+  failed_when: false
+  when: switchdev_setup_previous_mode != switchdev_setup_target_mode
+
+- name: Mark device invalid if setting eswitch mode failed
+  ansible.builtin.set_fact:
+    switchdev_setup_device_valid: false
+    switchdev_setup_device_error: >-
+      'devlink dev eswitch set {{ switchdev_setup_devlink_handle }} mode
+      {{ switchdev_setup_target_mode }}' failed:
+      {{ switchdev_setup_eswitch_set_result.stderr | default('unknown error') | trim }}.
+      This driver/firmware may not support the requested mode, may
+      require VFs to be unbound first (require_vfs_unbound: true), or may
+      need a different vendor hook (switchdev_setup_vendor_hooks).
+  when:
+    - switchdev_setup_eswitch_set_result is defined
+    - switchdev_setup_eswitch_set_result.rc | default(0) != 0
+
+- name: Run vendor-specific post-mode-change commands
+  ansible.builtin.command:
+    cmd: "{{ item }}"
+  loop: "{{ switchdev_setup_active_vendor_hooks.post_mode_change_commands | default([]) }}"
+  register: switchdev_setup_post_hook_result
+  changed_when: true
+  when:
+    - switchdev_setup_device_valid | bool
+    - switchdev_setup_previous_mode != switchdev_setup_target_mode
+
+- name: Allow the device to settle after an eswitch mode change
+  ansible.builtin.command:
+    cmd: "udevadm settle --timeout={{ switchdev_setup_active_vendor_hooks.representor_settle_seconds | default(3) }}"
+  changed_when: false
+  failed_when: false
+  when:
+    - switchdev_setup_device_valid | bool
+    - switchdev_setup_previous_mode != switchdev_setup_target_mode
+
+- name: Re-read eswitch mode after the change attempt
+  ansible.builtin.shell:
+    cmd: >
+      devlink dev eswitch show {{ switchdev_setup_devlink_handle }}
+      | grep -oE '(^|[[:space:]])mode [^[:space:]]+'
+      | awk '{print $NF}'
+  register: switchdev_setup_eswitch_mode_reextract
+  changed_when: false
+  failed_when: false
+  when: switchdev_setup_device_valid | bool
+
+- name: Record eswitch mode observed after the change attempt
+  ansible.builtin.set_fact:
+    switchdev_setup_current_mode_after: >-
+      {{ (switchdev_setup_eswitch_mode_reextract.stdout | default('') | trim)
+         if (switchdev_setup_eswitch_mode_reextract.stdout | default('') | trim | length > 0)
+         else switchdev_setup_previous_mode }}
+  when: switchdev_setup_device_valid | bool
+
+- name: Warn if the observed mode still does not match the target
+  ansible.builtin.debug:
+    msg: >-
+      '{{ switchdev_setup_resolved_identifier }}' reports eswitch mode
+      '{{ switchdev_setup_current_mode_after }}' after the change
+      attempt, but the requested target was
+      '{{ switchdev_setup_target_mode }}'. The devlink command may have
+      succeeded without error while the driver silently kept the
+      previous mode -- verify manually before relying on this result.
+  when:
+    - switchdev_setup_device_valid | bool
+    - switchdev_setup_current_mode_after != switchdev_setup_target_mode

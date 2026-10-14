@@ -1,0 +1,4 @@
+driver: ionic
+version: 1.0
+firmware-version: 1.2.3
+bus-info: 0000:0a:00.0

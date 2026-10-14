@@ -1,0 +1,69 @@
+---
+# tasks/verify_representors.yml
+#
+# Task 5: verify representor ports appear for this device. Deliberately
+# does NOT guess a vendor-specific netdev naming convention (these vary
+# widely -- e.g. "eth1v0" vs "pf0vf0" style names). Instead this asks
+# devlink itself which ports it considers VF representors, by looking for
+# 'flavour pcivf' entries in `devlink port show`. This is the same signal
+# a switchdev-aware userspace tool (e.g. OVS) would use.
+
+- name: List devlink VF representor ports for this device (emit JSON)
+  ansible.builtin.shell:
+    cmd: |
+      devlink port show "{{ switchdev_setup_devlink_handle }}" 2>/dev/null | awk '
+        /flavour pcivf/ {
+          handle = $1; sub(/:$/, "", handle);
+          netdev=""; pfnum=""; vfnum="";
+          for (i = 2; i <= NF; i++) {
+            if ($i == "netdev") netdev = $(i + 1);
+            if ($i == "pfnum")  pfnum  = $(i + 1);
+            if ($i == "vfnum")  vfnum  = $(i + 1);
+          }
+          netdev_json = (netdev == "") ? "null" : "\"" netdev "\"";
+          pfnum_json  = (pfnum  == "") ? "null" : pfnum;
+          vfnum_json  = (vfnum  == "") ? "null" : vfnum;
+          if (out != "") out = out ",";
+          out = out "{\"handle\": \"" handle "\", \"netdev\": " netdev_json ", \"pfnum\": " pfnum_json ", \"vfnum\": " vfnum_json "}";
+        }
+        END { print "[" out "]" }
+      '
+  register: switchdev_setup_representor_listing
+  changed_when: false
+  failed_when: false
+
+- name: Parse discovered representor ports
+  ansible.builtin.set_fact:
+    switchdev_setup_discovered_representors: >-
+      {{ (switchdev_setup_representor_listing.stdout | default('[]') | trim | length > 0)
+         | ternary(switchdev_setup_representor_listing.stdout | trim, '[]') | from_json }}
+
+- name: Count VFs currently present on this PF (informational context only)
+  ansible.builtin.shell:
+    cmd: "ls -d /sys/bus/pci/devices/{{ switchdev_setup_pci_address }}/virtfn* 2>/dev/null | wc -l"
+  register: switchdev_setup_vf_count_result
+  changed_when: false
+  failed_when: false
+
+- name: Report representor port verification result (switchdev target)
+  ansible.builtin.debug:
+    msg: >-
+      '{{ switchdev_setup_resolved_identifier }}': found
+      {{ switchdev_setup_discovered_representors | length }} representor
+      port(s) via devlink, against
+      {{ switchdev_setup_vf_count_result.stdout | default('0') | trim }}
+      VF(s) currently present on this PF.
+      {{ 'No VFs currently exist on this PF, so zero representors is expected.'
+         if (switchdev_setup_vf_count_result.stdout | default('0') | trim | int) == 0
+         else ('Representor count matches VF count.'
+               if switchdev_setup_discovered_representors | length == (switchdev_setup_vf_count_result.stdout | default('0') | trim | int)
+               else 'Representor count does NOT match VF count -- this can be normal immediately after a mode change (drivers may need more settle time, or VFs unbound earlier in this run may need to be rebound) or can indicate a real problem; re-verify after a short delay before treating this as an error.') }}
+  when: switchdev_setup_target_mode == 'switchdev'
+
+- name: Report representor check skipped for legacy mode
+  ansible.builtin.debug:
+    msg: >-
+      '{{ switchdev_setup_resolved_identifier }}' target mode is
+      'legacy'; representor ports are not expected/applicable in legacy
+      eswitch mode.
+  when: switchdev_setup_target_mode == 'legacy'

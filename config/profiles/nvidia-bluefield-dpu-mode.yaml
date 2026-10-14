@@ -1,0 +1,51 @@
+# NVIDIA BlueField DPU-mode profile (DEFAULT for VM-to-VM lab).
+#
+# OVS/OVS-DOCA and VF representors live on the BlueField Arm OS.
+# The x86 host only runs KVM/QEMU/libvirt and passes VFs into VMs.
+# Host OVS must not own forwarding.
+#
+# Merge these keys into an odse-lab-vm2vm/v1alpha1 file (see
+# config/lab-nvidia-vm2vm.example.yaml). Placeholders are not hardware.
+
+schema: odse-lab-profile/v1alpha1
+profile: nvidia-bluefield-dpu-mode
+
+vendor:
+  type: nvidia-bluefield
+  profile: nvidia-bluefield-dpu-mode
+
+nvidia:
+  mode: dpu
+  ovs_location: dpu
+  representor_location: dpu
+  datapath: ovs-doca
+  allow_host_ovs_for_forwarding: false
+
+host:
+  role:
+    - kvm
+    - qemu
+    - libvirt
+    - vf-passthrough
+
+host_forwarding_control:
+  enabled: false
+
+dpu:
+  role:
+    - representor-owner
+    - ovs-owner
+    - forwarding-owner
+  enable_switchdev: false
+  preferred_datapath: doca
+
+dpu_forwarding_control:
+  enabled: true
+
+representor_mapping:
+  location: dpu
+  strategy: nvidia-portname
+  require_high_confidence: true
+
+ovs:
+  datapath_type: doca

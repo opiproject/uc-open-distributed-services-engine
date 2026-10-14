@@ -1,0 +1,49 @@
+---
+galaxy_info:
+  role_name: sriov_setup
+  namespace: odse
+  author: Open Distributed Services Engine contributors
+  description: >-
+    Configures SR-IOV virtual functions (VFs) for selected physical
+    functions (PFs): validates PF existence and sriov_totalvfs, sets
+    sriov_numvfs, optionally persists the configuration via a generated
+    systemd unit, and reports created VF PCI addresses and netdev names.
+  license: Apache-2.0
+  min_ansible_version: "2.14"
+
+  # Platform coverage reflects the fact that this role operates entirely
+  # through generic Linux sysfs paths (/sys/class/net, /sys/bus/pci) and
+  # systemd, rather than distro-specific package/service names -- it does
+  # not itself install any packages. See README.md "Known limitations" for
+  # caveats that are independent of distro (kernel/driver behavior).
+  platforms:
+    - name: EL
+      versions:
+        - "8"
+        - "9"
+    - name: Fedora
+      versions:
+        - all
+    - name: Ubuntu
+      versions:
+        - all
+    - name: Debian
+      versions:
+        - all
+    - name: openSUSE
+      versions:
+        - all
+
+  galaxy_tags:
+    - networking
+    - sriov
+    - dpu
+    - virtualization
+    - offload
+
+# This role assumes ansible/roles/host_base (or equivalent) has already
+# run: it does not install kernel drivers, ethtool, or any other
+# prerequisite tooling itself. Not declared as a hard Ansible role
+# dependency so this role stays independently runnable and testable -- see
+# docs/architecture/overview.md for the intended role sequencing.
+dependencies: []

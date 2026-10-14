@@ -1,0 +1,44 @@
+---
+# tasks/check_totalvfs.yml
+#
+# Confirms the PF actually exposes sriov_totalvfs (i.e. supports SR-IOV at
+# all) and that the requested num_vfs does not exceed it.
+
+- name: Read sriov_totalvfs for this PF
+  ansible.builtin.slurp:
+    src: "/sys/class/net/{{ sriov_setup_pf.pf_name }}/device/sriov_totalvfs"
+  register: sriov_setup_totalvfs_raw
+  failed_when: false
+
+- name: Mark PF invalid if sriov_totalvfs could not be read
+  ansible.builtin.set_fact:
+    sriov_setup_pf_valid: false
+    sriov_setup_pf_error: >-
+      could not read sriov_totalvfs for '{{ sriov_setup_pf.pf_name }}' --
+      this PF likely does not support SR-IOV, or its driver does not
+      expose sriov_totalvfs
+  when: (sriov_setup_totalvfs_raw is failed) or (sriov_setup_totalvfs_raw.content is not defined)
+
+- name: Decode sriov_totalvfs value
+  ansible.builtin.set_fact:
+    sriov_setup_pf_totalvfs: "{{ (sriov_setup_totalvfs_raw.content | b64decode | trim) | int }}"
+  when: sriov_setup_pf_valid | bool
+
+- name: Mark PF invalid if requested num_vfs exceeds sriov_totalvfs
+  ansible.builtin.set_fact:
+    sriov_setup_pf_valid: false
+    sriov_setup_pf_error: >-
+      requested num_vfs ({{ sriov_setup_pf.num_vfs }}) exceeds
+      sriov_totalvfs ({{ sriov_setup_pf_totalvfs }}) for
+      '{{ sriov_setup_pf.pf_name }}'
+  when:
+    - sriov_setup_pf_valid | bool
+    - (sriov_setup_pf.num_vfs | int) > sriov_setup_pf_totalvfs
+
+- name: Report sriov_totalvfs check result
+  ansible.builtin.debug:
+    msg: >-
+      '{{ sriov_setup_pf.pf_name }}' supports up to
+      {{ sriov_setup_pf_totalvfs }} VFs; {{ sriov_setup_pf.num_vfs }}
+      were requested.
+  when: sriov_setup_pf_valid | bool

@@ -1,0 +1,23 @@
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN mode DEFAULT group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+2: p0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP mode DEFAULT group default qlen 1000
+    link/ether 00:02:c9:11:22:33 brd ff:ff:ff:ff:ff:ff
+    parentdev 0000:03:00.0
+    phys_port_name p0
+    phys_switch_id 7cfe90abcdef
+    portname p0
+3: pf0vf0: <BROADCAST,MULTICAST> mtu 1500 qdisc noop state DOWN mode DEFAULT group default qlen 1000
+    link/ether 00:02:c9:11:22:44 brd ff:ff:ff:ff:ff:ff
+    parentdev 0000:03:00.0
+    phys_port_name pf0vf0
+    phys_switch_id 7cfe90abcdef
+    portname pf0vf0
+4: pf0sf0: <BROADCAST,MULTICAST> mtu 1500 qdisc noop state DOWN mode DEFAULT group default qlen 1000
+    link/ether 00:02:c9:11:22:55 brd ff:ff:ff:ff:ff:ff
+    parentdev 0000:03:00.0
+    phys_port_name pf0sf0
+    portname pf0sf0
+5: eth0v1: <BROADCAST,MULTICAST> mtu 1500 qdisc noop state DOWN mode DEFAULT group default qlen 1000
+    link/ether 00:11:22:33:44:55 brd ff:ff:ff:ff:ff:ff
+6: enp4s0f0v0: <BROADCAST,MULTICAST> mtu 1500 qdisc noop state DOWN
+    link/ether 00:aa:bb:cc:dd:ee brd ff:ff:ff:ff:ff:ff

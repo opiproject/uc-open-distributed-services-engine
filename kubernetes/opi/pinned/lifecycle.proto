@@ -1,0 +1,122 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 The OPI Project Authors
+// Extracted from OpenShift DPU Operator
+
+syntax = "proto3";
+
+package opi_api.lifecycle.v1;
+
+import "google/api/annotations.proto";
+
+option go_package = "github.com/opiproject/opi-api/lifecycle/v1/gen/go";
+option java_multiple_files = true;
+option java_outer_classname = "LifecycleProto";
+option java_package = "opi_api.lifecycle.v1";
+
+// Lifecycle management service for xPU initialization
+service LifeCycleService {
+  // Initialize the xPU (DPU/IPU/etc)
+  rpc Init(InitRequest) returns (IpPort) {
+    option (google.api.http) = {
+      post: "/v1/lifecycle/init"
+      body: "*"
+    };
+  }
+}
+
+// Device lifecycle management service for device enumeration and configuration
+service DeviceService {
+  // Retrieve available devices managed by the xPU
+  rpc GetDevices(GetDevicesRequest) returns (DeviceListResponse) {
+    option (google.api.http) = {get: "/v1/lifecycle/devices"};
+  }
+
+  // Configure number of virtual functions for a device
+  rpc SetNumVfs(SetNumVfsRequest) returns (VfCount) {
+    option (google.api.http) = {
+      post: "/v1/lifecycle/devices/vfs"
+      body: "*"
+    };
+  }
+}
+
+// Heartbeat service for lifecycle health monitoring
+service HeartbeatService {
+  // Check xPU lifecycle health status
+  rpc Ping(PingRequest) returns (PingResponse) {
+    option (google.api.http) = {get: "/v1/lifecycle/heartbeat/ping"};
+  }
+}
+
+// xPU initialization request
+message InitRequest {
+  // xPU mode flag (e.g., DPU mode vs host mode)
+  bool dpu_mode = 1;
+  // xPU identifier string
+  string dpu_identifier = 2;
+}
+
+// Request message for GetDevices
+message GetDevicesRequest {
+  // Empty request - no parameters needed
+}
+
+// Request message for SetNumVfs
+message SetNumVfsRequest {
+  // Number of virtual functions to configure
+  int32 vf_cnt = 1;
+}
+
+// IP and port response for initialization
+message IpPort {
+  // IP address for xPU communication
+  string ip = 1;
+  // Port number for xPU communication
+  int32 port = 2;
+}
+
+// Virtual function count configuration
+message VfCount {
+  // Number of virtual functions to configure
+  int32 vf_cnt = 1;
+}
+
+// Topology information for device location
+message TopologyInfo {
+  // Node identifier where device is located
+  string node = 1;
+}
+
+// Device information structure
+message Device {
+  // Device identifier (e.g., "ens5f0", "eth0")
+  string id = 1;
+  // Device health status
+  string health = 2;
+  // Topology location information
+  TopologyInfo topology = 3;
+}
+
+// Device enumeration response
+message DeviceListResponse {
+  // Map of device ID to device information
+  map<string, Device> devices = 1;
+}
+
+// Ping request for health monitoring
+message PingRequest {
+  // Request timestamp (nanoseconds since epoch)
+  int64 timestamp = 1;
+  // Identifier of the sender
+  string sender_id = 2;
+}
+
+// Ping response for health monitoring
+message PingResponse {
+  // Response timestamp (nanoseconds since epoch)
+  int64 timestamp = 1;
+  // Identifier of the responder
+  string responder_id = 2;
+  // Health status indicator
+  bool healthy = 3;
+}

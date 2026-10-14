@@ -1,0 +1,247 @@
+{
+  "apply": false,
+  "cli": "odse-labctl/v1alpha1",
+  "dry_run": true,
+  "result": {
+    "config": {
+      "dry_run_default": true,
+      "host_name": "<HOST_NAME>",
+      "management_interface": "<MGMT_IFACE>",
+      "num_vfs": 2,
+      "pf_name": "<PF_NAME>",
+      "pf_pci": "<PF_PCI>",
+      "preferred_datapath": "doca",
+      "schema": "odse-lab-vm2vm/v1alpha1",
+      "vendor_type": "nvidia-bluefield",
+      "vm_names": [
+        "odse-vm2vm-vm1",
+        "odse-vm2vm-vm2"
+      ]
+    },
+    "dpu_ovs_validation": {
+      "capabilities": null,
+      "commands": [
+        {
+          "argv": [
+            "ssh",
+            "-o",
+            "BatchMode=yes",
+            "-o",
+            "StrictHostKeyChecking=accept-new",
+            "-p",
+            "22",
+            "<DPU_SSH_USER>@192.0.2.10",
+            "--",
+            "sudo",
+            "-n",
+            "command",
+            "-v",
+            "ovs-vsctl"
+          ],
+          "dry_run": true,
+          "executed": false,
+          "reason": "dpu ovs validate",
+          "returncode": null,
+          "shell": false,
+          "stderr": null,
+          "stdout": null,
+          "timed_out": false
+        },
+        {
+          "argv": [
+            "ssh",
+            "-o",
+            "BatchMode=yes",
+            "-o",
+            "StrictHostKeyChecking=accept-new",
+            "-p",
+            "22",
+            "<DPU_SSH_USER>@192.0.2.10",
+            "--",
+            "sudo",
+            "-n",
+            "command",
+            "-v",
+            "ovs-appctl"
+          ],
+          "dry_run": true,
+          "executed": false,
+          "reason": "dpu ovs validate",
+          "returncode": null,
+          "shell": false,
+          "stderr": null,
+          "stdout": null,
+          "timed_out": false
+        },
+        {
+          "argv": [
+            "ssh",
+            "-o",
+            "BatchMode=yes",
+            "-o",
+            "StrictHostKeyChecking=accept-new",
+            "-p",
+            "22",
+            "<DPU_SSH_USER>@192.0.2.10",
+            "--",
+            "sudo",
+            "-n",
+            "systemctl",
+            "is-active",
+            "openvswitch"
+          ],
+          "dry_run": true,
+          "executed": false,
+          "reason": "dpu ovs validate",
+          "returncode": null,
+          "shell": false,
+          "stderr": null,
+          "stdout": null,
+          "timed_out": false
+        },
+        {
+          "argv": [
+            "ssh",
+            "-o",
+            "BatchMode=yes",
+            "-o",
+            "StrictHostKeyChecking=accept-new",
+            "-p",
+            "22",
+            "<DPU_SSH_USER>@192.0.2.10",
+            "--",
+            "sudo",
+            "-n",
+            "ovs-vsctl",
+            "get",
+            "Open_vSwitch",
+            ".",
+            "datapath_types"
+          ],
+          "dry_run": true,
+          "executed": false,
+          "reason": "dpu ovs validate",
+          "returncode": null,
+          "shell": false,
+          "stderr": null,
+          "stdout": null,
+          "timed_out": false
+        },
+        {
+          "argv": [
+            "ssh",
+            "-o",
+            "BatchMode=yes",
+            "-o",
+            "StrictHostKeyChecking=accept-new",
+            "-p",
+            "22",
+            "<DPU_SSH_USER>@192.0.2.10",
+            "--",
+            "sudo",
+            "-n",
+            "ovs-vsctl",
+            "show"
+          ],
+          "dry_run": true,
+          "executed": false,
+          "reason": "dpu ovs validate",
+          "returncode": null,
+          "shell": false,
+          "stderr": null,
+          "stdout": null,
+          "timed_out": false
+        },
+        {
+          "argv": [
+            "ssh",
+            "-o",
+            "BatchMode=yes",
+            "-o",
+            "StrictHostKeyChecking=accept-new",
+            "-p",
+            "22",
+            "<DPU_SSH_USER>@192.0.2.10",
+            "--",
+            "sudo",
+            "-n",
+            "ovs-vsctl",
+            "get",
+            "Open_vSwitch",
+            ".",
+            "other_config"
+          ],
+          "dry_run": true,
+          "executed": false,
+          "reason": "dpu ovs validate",
+          "returncode": null,
+          "shell": false,
+          "stderr": null,
+          "stdout": null,
+          "timed_out": false
+        },
+        {
+          "argv": [
+            "ovs-vsctl",
+            "--may-exist",
+            "add-br",
+            "br-int"
+          ],
+          "dry_run": true,
+          "executed": false,
+          "reason": "create_ovs_bridge",
+          "returncode": null,
+          "shell": false,
+          "stderr": null,
+          "stdout": null,
+          "timed_out": false
+        },
+        {
+          "argv": [
+            "ovs-vsctl",
+            "set",
+            "bridge",
+            "br-int",
+            "datapath_type=doca"
+          ],
+          "dry_run": true,
+          "executed": false,
+          "reason": "create_ovs_bridge",
+          "returncode": null,
+          "shell": false,
+          "stderr": null,
+          "stdout": null,
+          "timed_out": false
+        }
+      ],
+      "destructive": false,
+      "details": {
+        "allow_doca_fallback": false,
+        "bridge_plan": "bridge br-int datapath_type=doca dry_run=True (system=kernel OVS-TC default)",
+        "dpu_ovs_status": "OVS_VALIDATION_PLANNED",
+        "dry_run": true,
+        "want_doca": true
+      },
+      "devices": [],
+      "executed": false,
+      "flows": [],
+      "message": "DPU OVS validation planned (dry-run SSH; not proven running)",
+      "operation": "validate_dpu_ovs_environment",
+      "physical_functions": [],
+      "representors": [],
+      "status": "ok",
+      "telemetry": [],
+      "vendor": "nvidia",
+      "virtual_functions": []
+    },
+    "issues": [],
+    "preserved_interfaces": [
+      "<MGMT_IFACE>"
+    ],
+    "stage": "validate-config",
+    "valid": true
+  },
+  "run_id": "20260816T040642Z",
+  "stage": "validate-config",
+  "vendor": "nvidia-bluefield"
+}

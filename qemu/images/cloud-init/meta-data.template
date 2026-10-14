@@ -1,0 +1,5 @@
+## ODSE VM-to-VM lab guest cloud-init meta-data.
+## Copy this file and replace every <PLACEHOLDER> alongside
+## user-data.template before running `prepare-vm-image.sh --method cloud-init`.
+instance-id: <INSTANCE_ID>
+local-hostname: <HOSTNAME>

@@ -1,0 +1,55 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Ansible
+*.retry
+.ansible/
+
+# Molecule
+.molecule/
+.cache/
+
+# Terraform (if introduced later)
+.terraform/
+*.tfstate
+*.tfstate.*
+
+# KIND / Kubernetes
+kubeconfig*
+*.kubeconfig
+
+# Editor / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Local lab inventories (keep the example files)
+config/lab.yaml
+config/lab.local.yaml
+config/*.secret.yaml
+config/lab-vm2vm.yaml
+config/lab-*-vm2vm.yaml
+!config/lab-*-vm2vm.example.yaml
+
+# labctl / lab_cleanup run output (keep README and the example report)
+tests/results/*/
+!tests/results/README.md
+!tests/results/example-vm2vm-single-dpu-result.md
+
+# Logs and local artifacts
+*.log
+/tmp/
+/dist/
+/build/
+
+# Built VM disk images / cloud-init seed ISOs (never commit these)
+qemu/images/*.qcow2
+qemu/images/*.iso
+qemu/images/**/*.qcow2
+qemu/images/**/*.iso

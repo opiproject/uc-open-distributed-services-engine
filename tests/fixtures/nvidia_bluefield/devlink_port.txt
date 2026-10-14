@@ -1,0 +1,3 @@
+pci/0000:03:00.0/1: type eth netdev p0 flavour physical port 0
+pci/0000:03:00.0/196608: type eth netdev pf0vf0 flavour pcivf controller 0 pfnum 0 vfnum 0
+pci/0000:03:00.0/196609: type eth netdev pf0sf0 flavour pcisf controller 0 pfnum 0 sfnum 0

@@ -1,0 +1,84 @@
+# ODSE lab environment EXAMPLE.
+# Copy to config/lab.yaml (gitignored) and replace every placeholder from
+# discovery. Do not treat these names, IPs, or VF counts as real hardware.
+#
+# IPs use TEST-NET-1 (192.0.2.0/24) documentation addresses.
+# Hostnames use .example.invalid.
+#
+# dry_run: true means vendorctl will not honor --apply until you copy this
+# file and set dry_run: false. CLI --dry-run always wins.
+
+schema: odse-lab-config/v1alpha1
+dry_run: true
+
+hosts:
+  - id: compute-01
+    hostname: compute-01.example.invalid
+    role: compute
+    dpu_devices:
+      - id: nvidia-dpu-0
+        vendor: nvidia-bluefield
+        management_ip: 192.0.2.10
+        pfs:
+          - name: "<PF_NETDEV>"
+            pci: "<PCI_ADDRESS>"
+            expected_vfs: null
+        bridges:
+          - name: br-int
+            datapath_type: system
+        vdpa:
+          enabled: false
+          mgmtdev: null
+          vf: null
+        opi_endpoint: null
+        redfish_endpoint: null
+
+      - id: intel-ipu-0
+        vendor: intel-ipu
+        management_ip: 192.0.2.20
+        pfs:
+          - name: "<IPU_PF_NETDEV>"
+            pci: "<IPU_PCI_ADDRESS>"
+            expected_vfs: null
+        bridges: []
+        vdpa:
+          enabled: false
+          mgmtdev: null
+          vf: null
+        opi_endpoint: "https://opi.example.invalid:443"
+        redfish_endpoint: "https://192.0.2.20"
+
+      - id: marvell-dpu-0
+        vendor: marvell-octeon
+        management_ip: 192.0.2.30
+        pfs:
+          - name: "<OCTEON_PF_NETDEV>"
+            pci: "<OCTEON_PCI_ADDRESS>"
+            expected_vfs: null
+        bridges:
+          - name: br-int
+            datapath_type: netdev
+        vdpa:
+          enabled: false
+          mgmtdev: null
+          vf: null
+        opi_endpoint: null
+        redfish_endpoint: null
+        dao_app: null
+
+      - id: amd-dsc-0
+        vendor: amd-pensando
+        management_ip: 192.0.2.40
+        pfs:
+          - name: "<IONIC_PF_NETDEV>"
+            pci: "<IONIC_PCI_ADDRESS>"
+            expected_vfs: null
+        bridges:
+          - name: br-int
+            datapath_type: system
+        vdpa:
+          enabled: false
+          mgmtdev: null
+          vf: null
+        opi_endpoint: null
+        redfish_endpoint: null

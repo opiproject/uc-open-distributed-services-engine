@@ -1,0 +1,4 @@
+driver: ice
+version: 1.0
+firmware-version: 4.0
+bus-info: 0000:01:00.0

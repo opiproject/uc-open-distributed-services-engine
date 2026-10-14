@@ -1,0 +1,99 @@
+---
+# tasks/resolve_device.yml
+#
+# Normalizes one switchdev_devices entry -- string or object form -- into
+# a common set of facts used by the rest of configure_device.yml:
+#   switchdev_setup_pci_address, switchdev_setup_pf_name,
+#   switchdev_setup_target_mode, switchdev_setup_vendor_key,
+#   switchdev_setup_resolved_identifier
+
+- name: Determine whether this entry is a mapping or a plain string
+  ansible.builtin.set_fact:
+    switchdev_setup_device_is_mapping: "{{ switchdev_setup_device is mapping }}"
+
+- name: Extract raw identifier and per-device overrides (object form)
+  ansible.builtin.set_fact:
+    switchdev_setup_raw_identifier: >-
+      {{ switchdev_setup_device.pci_address | default(switchdev_setup_device.pf_name) | default('') }}
+    switchdev_setup_hint_pf_name: "{{ switchdev_setup_device.pf_name | default('') }}"
+    switchdev_setup_hint_pci_address: "{{ switchdev_setup_device.pci_address | default('') }}"
+    switchdev_setup_target_mode: "{{ switchdev_setup_device.mode | default(switchdev_mode) }}"
+    switchdev_setup_vendor_key: "{{ switchdev_setup_device.vendor | default(switchdev_setup_default_vendor) }}"
+  when: switchdev_setup_device_is_mapping | bool
+
+- name: Extract raw identifier and defaults (plain string form)
+  ansible.builtin.set_fact:
+    switchdev_setup_raw_identifier: "{{ switchdev_setup_device }}"
+    switchdev_setup_hint_pf_name: ""
+    switchdev_setup_hint_pci_address: ""
+    switchdev_setup_target_mode: "{{ switchdev_mode }}"
+    switchdev_setup_vendor_key: "{{ switchdev_setup_default_vendor }}"
+  when: not (switchdev_setup_device_is_mapping | bool)
+
+- name: Mark device invalid if no usable identifier was provided
+  ansible.builtin.set_fact:
+    switchdev_setup_device_valid: false
+    switchdev_setup_device_error: >-
+      entry provides no usable identifier (expected a PF name string, a
+      PCI address string, or an object with 'pf_name' and/or
+      'pci_address')
+  when: >-
+    (switchdev_setup_raw_identifier | length == 0)
+    and (switchdev_setup_hint_pf_name | length == 0)
+    and (switchdev_setup_hint_pci_address | length == 0)
+
+- name: Mark device invalid if the requested per-device mode is invalid
+  ansible.builtin.set_fact:
+    switchdev_setup_device_valid: false
+    switchdev_setup_device_error: >-
+      per-device 'mode' override must be 'switchdev' or 'legacy', got
+      '{{ switchdev_setup_target_mode }}'
+  when:
+    - switchdev_setup_device_valid | bool
+    - switchdev_setup_target_mode not in ['switchdev', 'legacy']
+
+- name: Determine if the identifier looks like a PCI address
+  ansible.builtin.set_fact:
+    switchdev_setup_identifier_is_pci: >-
+      {{ (switchdev_setup_hint_pci_address | length > 0)
+         or (switchdev_setup_raw_identifier is match('^([0-9a-fA-F]{4}:)?[0-9a-fA-F]{2}:[0-9a-fA-F]{2}\.[0-9a-fA-F]$')) }}
+  when: switchdev_setup_device_valid | bool
+
+- name: Resolve PCI address directly when given explicitly or pattern-matched
+  ansible.builtin.set_fact:
+    switchdev_setup_pci_address: >-
+      {{ (switchdev_setup_hint_pci_address if switchdev_setup_hint_pci_address | length > 0 else switchdev_setup_raw_identifier)
+         | regex_replace('^([0-9a-fA-F]{2}:[0-9a-fA-F]{2}\.[0-9a-fA-F])$', '0000:\1') }}
+  when:
+    - switchdev_setup_device_valid | bool
+    - switchdev_setup_identifier_is_pci | bool
+
+- name: Resolve a PF interface name to a PCI address when a PF name was given
+  ansible.builtin.include_tasks: resolve_pf_name_to_pci.yml
+  when:
+    - switchdev_setup_device_valid | bool
+    - not (switchdev_setup_identifier_is_pci | bool)
+
+- name: Attempt to resolve a display-friendly PF netdev name from the PCI address
+  ansible.builtin.shell:
+    cmd: "ls /sys/bus/pci/devices/{{ switchdev_setup_pci_address }}/net 2>/dev/null | head -n1"
+  register: switchdev_setup_pf_name_lookup
+  changed_when: false
+  failed_when: false
+  when:
+    - switchdev_setup_device_valid | bool
+    - switchdev_setup_identifier_is_pci | bool
+
+- name: Record resolved PF netdev name (informational; may remain unset)
+  ansible.builtin.set_fact:
+    switchdev_setup_pf_name: "{{ switchdev_setup_pf_name_lookup.stdout | trim }}"
+  when:
+    - switchdev_setup_device_valid | bool
+    - switchdev_setup_identifier_is_pci | bool
+    - switchdev_setup_pf_name_lookup.stdout | default('') | trim | length > 0
+
+- name: Record human-friendly resolved identifier
+  ansible.builtin.set_fact:
+    switchdev_setup_resolved_identifier: >-
+      {{ switchdev_setup_pf_name | default(switchdev_setup_pci_address | default(switchdev_setup_raw_identifier)) }}
+  when: switchdev_setup_device_valid | bool

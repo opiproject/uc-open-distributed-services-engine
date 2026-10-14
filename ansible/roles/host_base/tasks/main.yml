@@ -1,0 +1,66 @@
+---
+# tasks/main.yml for host_base
+#
+# Orchestrates the sub-task files below. Each block is independently
+# toggleable via defaults/main.yml so this role can be run in stages (e.g.
+# checks only, or package installation without service management) --
+# see README.md for common invocation patterns.
+
+- name: Ensure Ansible facts are available
+  ansible.builtin.setup:
+  when: ansible_facts.os_family is not defined
+
+- name: Check virtualization support
+  ansible.builtin.include_tasks: checks_virtualization.yml
+  when: host_base_check_virtualization | bool
+
+- name: Check IOMMU kernel command line
+  ansible.builtin.include_tasks: checks_iommu.yml
+  when: host_base_check_iommu | bool
+
+- name: Install baseline packages
+  ansible.builtin.include_tasks: install_package_group.yml
+  when: host_base_install_baseline_packages | bool
+  vars:
+    host_base_package_group_name: "baseline"
+    host_base_package_group_map: "{{ host_base_baseline_packages_by_family }}"
+
+- name: Install network tooling packages (iproute2, ethtool, pciutils, jq, python3)
+  ansible.builtin.include_tasks: install_package_group.yml
+  when: host_base_install_network_tools | bool
+  vars:
+    host_base_package_group_name: "network tools"
+    host_base_package_group_map: "{{ host_base_network_tools_packages_by_family }}"
+
+- name: Install QEMU/KVM and libvirt packages
+  ansible.builtin.include_tasks: install_package_group.yml
+  when: host_base_install_kvm | bool
+  vars:
+    host_base_package_group_name: "QEMU/KVM and libvirt"
+    host_base_package_group_map: "{{ host_base_kvm_packages_by_family }}"
+
+- name: Install Open vSwitch packages
+  ansible.builtin.include_tasks: install_package_group.yml
+  when: host_base_install_ovs | bool
+  vars:
+    host_base_package_group_name: "Open vSwitch"
+    host_base_package_group_map: "{{ host_base_ovs_packages_by_family }}"
+
+- name: Install OVN packages
+  ansible.builtin.include_tasks: install_package_group.yml
+  when: host_base_install_ovn | bool
+  vars:
+    host_base_package_group_name: "OVN"
+    host_base_package_group_map: "{{ host_base_ovn_packages_by_family }}"
+
+- name: Configure hugepages
+  ansible.builtin.include_tasks: hugepages.yml
+  when: host_base_configure_hugepages | bool
+
+- name: Start and enable libvirtd
+  ansible.builtin.include_tasks: service_libvirtd.yml
+  when: host_base_start_libvirtd | bool
+
+- name: Start and enable Open vSwitch
+  ansible.builtin.include_tasks: service_openvswitch.yml
+  when: host_base_start_openvswitch | bool

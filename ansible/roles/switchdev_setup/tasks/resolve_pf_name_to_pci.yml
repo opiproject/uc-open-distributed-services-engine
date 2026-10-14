@@ -1,0 +1,37 @@
+---
+# tasks/resolve_pf_name_to_pci.yml
+#
+# Resolves a PF interface name to its PCI address via sysfs. Included from
+# resolve_device.yml when the entry's identifier did not already look like
+# a PCI address.
+
+- name: Determine which PF interface name to resolve
+  ansible.builtin.set_fact:
+    switchdev_setup_pf_name: >-
+      {{ switchdev_setup_hint_pf_name if switchdev_setup_hint_pf_name | length > 0 else switchdev_setup_raw_identifier }}
+
+- name: Check that the named interface has an associated PCI device
+  ansible.builtin.stat:
+    path: "/sys/class/net/{{ switchdev_setup_pf_name }}/device"
+  register: switchdev_setup_pf_device_stat
+
+- name: Mark device invalid if the interface or its PCI device is missing
+  ansible.builtin.set_fact:
+    switchdev_setup_device_valid: false
+    switchdev_setup_device_error: >-
+      interface '{{ switchdev_setup_pf_name }}' does not exist under
+      /sys/class/net, or has no associated PCI device. Check the
+      interface name, or provide 'pci_address' directly instead.
+  when: not (switchdev_setup_pf_device_stat.stat.exists | default(false))
+
+- name: Resolve PCI address for the named interface
+  ansible.builtin.command:
+    cmd: "readlink -f /sys/class/net/{{ switchdev_setup_pf_name }}/device"
+  register: switchdev_setup_pf_pci_path
+  changed_when: false
+  when: switchdev_setup_device_valid | bool
+
+- name: Record PCI address
+  ansible.builtin.set_fact:
+    switchdev_setup_pci_address: "{{ switchdev_setup_pf_pci_path.stdout | trim | basename }}"
+  when: switchdev_setup_device_valid | bool

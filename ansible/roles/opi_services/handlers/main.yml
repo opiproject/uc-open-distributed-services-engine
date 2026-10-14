@@ -1,0 +1,4 @@
+---
+# handlers/main.yml for opi_services
+#
+# No handlers yet. Future: restart odse-opi-adapter after TLS material copy.

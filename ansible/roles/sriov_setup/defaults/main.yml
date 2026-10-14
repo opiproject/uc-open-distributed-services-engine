@@ -1,0 +1,69 @@
+---
+# defaults/main.yml for sriov_setup
+#
+# ---------------------------------------------------------------------------
+# sriov_interfaces: list of objects describing which PFs to configure.
+#
+# Each item supports:
+#   pf_name:         (required) PF network interface name, e.g. "eth0"
+#   num_vfs:         (required) desired number of VFs on this PF
+#   autoload_driver: (optional, default true) if false, this role attempts
+#                    to unbind each created VF from whatever driver
+#                    auto-probed it, leaving it driver-less (e.g. as a
+#                    precursor to manual/vfio/vendor-specific binding).
+#   vf_driver:       (optional, default none) if set, this role attempts to
+#                    bind each created VF to this driver name (e.g.
+#                    "vfio-pci") via driver_override + a probe. Best-effort
+#                    -- see README.md "Known limitations".
+#
+# Example:
+#   sriov_interfaces:
+#     - pf_name: eth0
+#       num_vfs: 8
+#       autoload_driver: true
+#     - pf_name: eth1
+#       num_vfs: 4
+#       autoload_driver: false
+#       vf_driver: vfio-pci
+# ---------------------------------------------------------------------------
+
+sriov_interfaces: []
+
+# If true, generate and enable a persistent systemd unit per configured PF
+# so sriov_numvfs is reapplied on every boot. If false (default), the
+# configuration applied by this run is not persisted and will be lost on
+# reboot -- see README.md "Persistence".
+sriov_persist: false
+
+# ---------------------------------------------------------------------------
+# Safety controls
+#
+# Changing sriov_numvfs on a PF that already has a *different*, non-zero
+# VF count requires first writing 0 to sriov_numvfs, which destroys and
+# recreates every existing VF on that PF. This can disrupt running VMs,
+# containers, representor/OVS bindings, or anything else already using
+# those VFs. See README.md "Safety notes" before changing this.
+# ---------------------------------------------------------------------------
+
+sriov_setup_allow_disruptive_reconfigure: false
+
+# If true, fail the whole play immediately on any validation error for any
+# single interface (missing PF, num_vfs exceeding sriov_totalvfs, refused
+# disruptive reconfigure, etc.). If false (default), that interface is
+# skipped with a warning and the remaining sriov_interfaces are still
+# processed.
+sriov_setup_fail_fast: false
+
+# ---------------------------------------------------------------------------
+# Persistence implementation
+# ---------------------------------------------------------------------------
+
+# Directory where the generated systemd unit files are written.
+sriov_setup_systemd_unit_dir: /etc/systemd/system
+
+# Currently the only implemented persistence mechanism is a generated
+# systemd oneshot unit per PF. This variable exists as a placeholder for a
+# future distro-specific alternative (e.g. RedHat-style
+# /etc/sysconfig/network-scripts ifcfg SRIOV_NUMVFS entries, or a
+# NetworkManager dispatcher script) -- not yet implemented.
+sriov_setup_persist_method: systemd

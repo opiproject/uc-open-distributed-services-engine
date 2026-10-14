@@ -1,0 +1,99 @@
+{
+  "schema_version": "odse-vendor-readiness-matrix/v1alpha1",
+  "note": "Unknown capabilities are discovery-required. Do not overclaim.",
+  "rows": [
+    {
+      "vendor": "amd-pensando",
+      "profile": "amd-pensando-discovery-first",
+      "intended_first_use_case": "ionic/SR-IOV/representor discovery",
+      "control_model": "discovery-first; no assumed OVS",
+      "ovs_location": "not assumed",
+      "representor_location": "discovery-required",
+      "operator_api_dependency": "none",
+      "vm_to_vm_readiness": "discovery-required",
+      "vm_to_pod_readiness": "discovery-required",
+      "offload_validation_readiness": "ionic stats are not offload proof",
+      "cleanup_readiness": "no assumed teardown",
+      "status": "GO_FOR_DISCOVERY_ONLY",
+      "blockers": [
+        "AMD_DISCOVERY_ONLY"
+      ],
+      "recommended_next_action": "VM-to-VM DPU forwarding is not yet proven for this AMD Pensando configuration. Do not run configure-forwarding until a representor, switchdev, OVS, or vendor-supported control path is discovered.",
+      "config": "config/lab-amd-vm2vm.example.yaml"
+    },
+    {
+      "vendor": "intel-ipu",
+      "profile": "intel-ipu-opi-dpu-operator",
+      "intended_first_use_case": "network-function-offload (intel-nf), not VM-to-VM OVS",
+      "control_model": "OPI / DPU Operator",
+      "ovs_location": "not assumed",
+      "representor_location": "discovery-required",
+      "operator_api_dependency": "OPI endpoint; optional DPU Operator",
+      "vm_to_vm_readiness": "discovery-required",
+      "vm_to_pod_readiness": "discovery-required",
+      "offload_validation_readiness": "not OVS-TC",
+      "cleanup_readiness": "intel-nf skeleton",
+      "status": "GO_FOR_DISCOVERY_ONLY",
+      "blockers": [
+        "INTEL_OPI_ENDPOINT_REQUIRED"
+      ],
+      "recommended_next_action": "Use labctl intel-nf; do not assume NVIDIA representors. vm_to_vm=discovery-required",
+      "config": "config/lab-intel-network-function-offload.example.yaml"
+    },
+    {
+      "vendor": "intel-ipu",
+      "profile": "intel-ipu-opi-dpu-operator",
+      "intended_first_use_case": "network-function-offload (intel-nf), not VM-to-VM OVS",
+      "control_model": "OPI / DPU Operator",
+      "ovs_location": "not assumed",
+      "representor_location": "discovery-required",
+      "operator_api_dependency": "OPI endpoint; optional DPU Operator",
+      "vm_to_vm_readiness": "discovery-required",
+      "vm_to_pod_readiness": "discovery-required",
+      "offload_validation_readiness": "not OVS-TC",
+      "cleanup_readiness": "intel-nf skeleton",
+      "status": "GO_FOR_DISCOVERY_ONLY",
+      "blockers": [
+        "INTEL_OPI_ENDPOINT_REQUIRED"
+      ],
+      "recommended_next_action": "Use labctl intel-nf; do not assume NVIDIA representors. vm_to_vm=discovery-required",
+      "config": "config/lab-intel-vm2vm.example.yaml"
+    },
+    {
+      "vendor": "marvell-octeon",
+      "profile": "marvell-octeon-dao-ovs-offload",
+      "intended_first_use_case": "DAO/DPDK OVS-offload discovery",
+      "control_model": "DAO OVS-offload / DPDK representors",
+      "ovs_location": "dpu",
+      "representor_location": "dpu (dpdk)",
+      "operator_api_dependency": "DAO/DPDK runtime",
+      "vm_to_vm_readiness": "discovery-required",
+      "vm_to_pod_readiness": "discovery-required",
+      "offload_validation_readiness": "marvell_dao_evidence skeleton",
+      "cleanup_readiness": "refuses untracked DPDK unbind",
+      "status": "BLOCKED_MISSING_VENDOR_RUNTIME",
+      "blockers": [
+        "MARVELL_DAO_MISSING"
+      ],
+      "recommended_next_action": "Fill DAO binary/hugepages from hardware discovery; do not copy NVIDIA OVS.",
+      "config": "config/lab-marvell-vm2vm.example.yaml"
+    },
+    {
+      "vendor": "nvidia-bluefield",
+      "profile": "nvidia-bluefield-dpu-mode",
+      "intended_first_use_case": "VM-to-VM DPU-side OVS/OVS-DOCA",
+      "control_model": "labctl -> RemoteCommandRunner -> DPU ovs-vsctl",
+      "ovs_location": "dpu",
+      "representor_location": "dpu",
+      "operator_api_dependency": "none (DPU OVS)",
+      "vm_to_vm_readiness": "dry-run",
+      "vm_to_pod_readiness": "discovery-required",
+      "offload_validation_readiness": "dpu-side planned",
+      "cleanup_readiness": "dpu-side planned",
+      "status": "GO_FOR_HARDWARE_DRY_RUN",
+      "blockers": [],
+      "recommended_next_action": "Review first-run NVIDIA DPU-mode runbook; keep --apply gated.",
+      "config": "config/lab-nvidia-vm2vm.example.yaml"
+    }
+  ]
+}

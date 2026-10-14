@@ -1,0 +1,39 @@
+---
+# tasks/validate_pf.yml
+#
+# Confirms the requested PF exists as a network interface and has an
+# associated PCI device, before anything else is attempted.
+
+- name: Check that the PF network interface exists
+  ansible.builtin.stat:
+    path: "/sys/class/net/{{ sriov_setup_pf.pf_name }}"
+  register: sriov_setup_pf_netdev_stat
+
+- name: Check that the PF has an associated PCI device
+  ansible.builtin.stat:
+    path: "/sys/class/net/{{ sriov_setup_pf.pf_name }}/device"
+  register: sriov_setup_pf_device_stat
+  when: sriov_setup_pf_netdev_stat.stat.exists | default(false)
+
+- name: Mark PF invalid if it does not exist or has no associated PCI device
+  ansible.builtin.set_fact:
+    sriov_setup_pf_valid: false
+    sriov_setup_pf_error: >-
+      interface '{{ sriov_setup_pf.pf_name }}' does not exist under
+      /sys/class/net, or has no associated PCI device (device path is
+      missing). Check the interface name and that its driver is loaded.
+  when: >-
+    not (sriov_setup_pf_netdev_stat.stat.exists | default(false))
+    or not (sriov_setup_pf_device_stat.stat.exists | default(false))
+
+- name: Resolve PF PCI address
+  ansible.builtin.command:
+    cmd: "readlink -f /sys/class/net/{{ sriov_setup_pf.pf_name }}/device"
+  register: sriov_setup_pf_pci_path
+  changed_when: false
+  when: sriov_setup_pf_valid | bool
+
+- name: Record PF PCI address
+  ansible.builtin.set_fact:
+    sriov_setup_pf_pci_address: "{{ sriov_setup_pf_pci_path.stdout | trim | basename }}"
+  when: sriov_setup_pf_valid | bool

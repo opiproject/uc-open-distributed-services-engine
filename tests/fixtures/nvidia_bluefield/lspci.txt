@@ -1,0 +1,5 @@
+0000:03:00.0 Ethernet controller [0200]: Mellanox Technologies MT43244 BlueField-3 integrated ConnectX-7 network controller [15b3:a2dc]
+0000:03:00.1 Ethernet controller [0200]: Mellanox Technologies MT43244 BlueField-3 integrated ConnectX-7 network controller [15b3:a2dc]
+0000:04:00.2 Ethernet controller [0200]: Mellanox Technologies ConnectX-6 Dx Virtual Function [15b3:101e]
+00:02.0 VGA compatible controller [0300]: Intel Corporation Device [8086:1234]
+01:00.0 Ethernet controller [0200]: Intel Corporation Ethernet Controller E810 [8086:1593]

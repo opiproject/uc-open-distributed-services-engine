@@ -1,0 +1,104 @@
+#!/usr/bin/env bash
+# ODSE VM-to-VM lab: guest-side network setup for the VF-backed interface.
+#
+# Copy this file into the guest, or pipe it over SSH and pass arguments
+# after `--` (this is exactly what `tools/labctl.py vm2vm configure-vm-ips`
+# / `run-traffic` do):
+#
+#   ssh <ssh_user>@<mgmt-ip> bash -s -- <IP_CIDR> [IFACE] [--iperf3-server]
+#
+# It does NOT touch the guest's management interface (the one your SSH
+# session is using) unless you explicitly pass that interface name.
+#
+# Arguments:
+#   $1  IP_CIDR         required, e.g. 198.51.100.11/24
+#   $2  IFACE            optional; auto-detected if omitted (see below)
+#   $3  --iperf3-server  optional; if present, start `iperf3 -s -D` after
+#                        the address is assigned
+#
+# Companion: qemu/images/README.md, docs/operations/vm-image-preparation.md
+
+set -euo pipefail
+
+IP_CIDR="${1:-}"
+IFACE_ARG="${2:-}"
+START_IPERF3="${3:-}"
+
+if [[ -z "${IP_CIDR}" ]]; then
+  echo "usage: $0 <IP_CIDR> [IFACE] [--iperf3-server]" >&2
+  exit 2
+fi
+
+echo "== non-loopback interfaces =="
+ip -o link show | awk -F': ' '{print $2}' | grep -v '^lo$' || true
+
+detect_iface() {
+  # Interface currently carrying the default route (almost certainly the
+  # management NIC) is excluded so we do not accidentally reconfigure the
+  # link this SSH session depends on.
+  local mgmt_iface
+  mgmt_iface="$(ip route show default 2>/dev/null | awk '/default/ {print $5; exit}')"
+
+  local candidate
+  for candidate in $(ip -o link show | awk -F': ' '{print $2}' | grep -v '^lo$'); do
+    if [[ "${candidate}" != "${mgmt_iface}" ]]; then
+      echo "${candidate}"
+      return 0
+    fi
+  done
+  return 1
+}
+
+if [[ -n "${IFACE_ARG}" && "${IFACE_ARG}" != "--iperf3-server" ]]; then
+  IFACE="${IFACE_ARG}"
+else
+  # $2 was actually the --iperf3-server flag, or nothing was given.
+  if [[ "${IFACE_ARG}" == "--iperf3-server" ]]; then
+    START_IPERF3="--iperf3-server"
+  fi
+  IFACE="$(detect_iface)" || {
+    echo "error: could not auto-detect a non-management, non-loopback interface; pass IFACE explicitly" >&2
+    exit 1
+  }
+  echo "auto-detected interface: ${IFACE}"
+fi
+
+if ! ip link show "${IFACE}" >/dev/null 2>&1; then
+  echo "error: interface ${IFACE} does not exist on this guest" >&2
+  exit 1
+fi
+
+echo "== bringing up ${IFACE} =="
+# -n: never prompt. This runs over a non-interactive SSH session (no
+# controlling terminal) -- if NOPASSWD sudo is not actually granted for
+# this user, sudo would otherwise hang/fail on "a terminal is required
+# to read the password" instead of failing fast with a clear message.
+# See "sudo: a terminal is required to read the password" in
+# docs/operations/vm-image-preparation.md if this happens.
+sudo -n ip link set "${IFACE}" up
+
+echo "== assigning ${IP_CIDR} to ${IFACE} =="
+# Idempotent: drop any prior address on this interface from a previous
+# run before adding the requested one.
+sudo -n ip addr flush dev "${IFACE}" scope global 2>/dev/null || true
+sudo -n ip addr add "${IP_CIDR}" dev "${IFACE}"
+
+echo "== link state =="
+ip link show "${IFACE}"
+echo "== address state =="
+ip -4 addr show "${IFACE}"
+
+if [[ "${START_IPERF3}" == "--iperf3-server" ]]; then
+  if command -v iperf3 >/dev/null 2>&1; then
+    echo "== starting iperf3 server (background, one-shot) =="
+    # -1: exit after one client connects, so this does not leak a
+    # long-running server process across lab runs.
+    nohup iperf3 -s -1 >/tmp/iperf3-server.log 2>&1 &
+    disown
+    echo "iperf3 server started (pid $!), log: /tmp/iperf3-server.log"
+  else
+    echo "warning: iperf3 not installed; skipping --iperf3-server" >&2
+  fi
+fi
+
+echo "== done: ${IFACE} = ${IP_CIDR} =="

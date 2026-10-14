@@ -1,0 +1,118 @@
+---
+# defaults/main.yml for ovs_setup
+#
+# ---------------------------------------------------------------------------
+# ovs_bridges: list of bridges to ensure exist. Each entry is EITHER:
+#
+#   - a plain string: a bridge name (uses ovs_datapath_type and no other
+#     options), or
+#
+#   - an object with:
+#       name:           (required) bridge name
+#       datapath_type:  (optional) per-bridge override of ovs_datapath_type
+#       fail_mode:      (optional) 'standalone' or 'secure'
+#       external_ids:   (optional) dict of external-ids to set on the bridge
+#       set:            (optional) list of raw strings, each in the form
+#                       "<table> <record> <column>=<value>", passed
+#                       verbatim to `ovs-vsctl set` as an escape hatch for
+#                       anything not modeled explicitly here (e.g.
+#                       vendor-specific bridge columns).
+#
+# Example:
+#   ovs_bridges:
+#     - br-int
+#     - name: br-phy
+#       datapath_type: netdev
+#       fail_mode: secure
+# ---------------------------------------------------------------------------
+
+ovs_bridges: []
+
+# Global toggle for the Open_vSwitch other_config:hw-offload setting.
+# This is a switch-wide OVSDB setting (Open_vSwitch table), not a
+# per-bridge one. Reconciled to true/false on every run.
+ovs_enable_hw_offload: false
+
+# If true, restart the OVS service (ovs-vswitchd/ovsdb-server unit) when
+# other_config:hw-offload actually changes. This is disruptive (existing
+# flows/ports are affected while the daemon restarts). Left false by
+# default -- whether a restart is actually required depends on the OVS
+# version in use; some versions apply hw-offload to newly-created ports
+# without a restart. See README.md.
+ovs_setup_restart_on_hw_offload_change: false
+
+# Global default datapath_type applied to bridges that do not specify
+# their own 'datapath_type'. Left empty by default so OVS's own default
+# ('system') applies and existing bridges are left untouched unless a
+# value is explicitly provided here or per-bridge. Accepts any string --
+# 'system', 'netdev' (userspace/DPDK datapath), or a vendor-specific value
+# registered by a vendor's OVS build/plugin. This role does not validate
+# against a fixed enum, since vendor-specific datapath types cannot be
+# enumerated generically here.
+ovs_datapath_type: ""
+
+# ---------------------------------------------------------------------------
+# ovs_ports: list of ports/interfaces to ensure exist. Each entry is an
+# object with:
+#   bridge:          (required) bridge this port should belong to
+#   port:            (required) OVS port name (commonly the same as the
+#                    underlying interface name, e.g. a representor netdev
+#                    name such as 'eth1v0' or 'pf0vf0')
+#   interface_type:  (optional, default 'system') OVS interface 'type'
+#                    column -- e.g. 'system', 'internal', 'dpdk', 'patch',
+#                    'vxlan', or a vendor-specific type string.
+#   options:         (optional) dict of interface 'options:' key/value
+#                    pairs (e.g. dpdk-devargs for DPDK/representor ports).
+#   tag:             (optional) VLAN tag to set on the port.
+#   mtu_request:     (optional) interface mtu_request value.
+#   set:             (optional) list of raw "<table> <record> <column>=<value>"
+#                    strings, same escape hatch as ovs_bridges[].set.
+#
+# Example (kernel representor port after switchdev_setup):
+#   ovs_ports:
+#     - bridge: br-int
+#       port: eth1v0
+#       interface_type: system
+#
+# Example (DPDK representor port):
+#   ovs_ports:
+#     - bridge: br-phy
+#       port: vf0-representor
+#       interface_type: dpdk
+#       options:
+#         dpdk-devargs: "0000:03:00.0,representor=[0]"
+# ---------------------------------------------------------------------------
+
+ovs_ports: []
+
+# If true, fail the whole play on the first bridge/port error instead of
+# skipping it with a warning and continuing with the rest.
+ovs_setup_fail_fast: false
+
+# If true, this role will attempt to start/enable the OVS service unit.
+# Set to false if OVS lifecycle is managed some other way on this host
+# (e.g. inside a container/pod on a DPU, rather than a host systemd
+# unit) -- the functional check (ovs-vsctl show) still runs regardless.
+ovs_setup_manage_service: true
+
+# Service name per OS family, mirroring ansible/roles/host_base. This role
+# does not install OVS -- see host_base -- but does ensure the service
+# unit is started/enabled (when ovs_setup_manage_service is true), since
+# role execution order across a playbook is not guaranteed.
+ovs_setup_service_name_by_os_family:
+  RedHat: openvswitch
+  Debian: openvswitch-switch
+  Suse: openvswitch
+  default: openvswitch
+
+# ---------------------------------------------------------------------------
+# Facts output (in addition to the ovs-vsctl show / dpctl show dump)
+# ---------------------------------------------------------------------------
+
+ovs_setup_facts_dir: /etc/ansible/facts.d
+ovs_setup_facts_file_name: ovs_setup.fact
+
+# If true, re-run a scoped `setup` fact gather (filtered to ansible_local)
+# immediately after writing the facts file, so ansible_local.ovs_setup is
+# already visible to later tasks/roles within the same play run.
+ovs_setup_refresh_local_facts: true

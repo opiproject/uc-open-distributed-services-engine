@@ -1,0 +1,77 @@
+---
+# tasks/configure_pf.yml
+#
+# Included once per item in sriov_interfaces (see tasks/main.yml). The
+# current item is available as `sriov_setup_pf` via loop_control. Each
+# validation step below can mark the PF invalid via
+# sriov_setup_pf_valid/sriov_setup_pf_error; once invalid, later steps in
+# this file are skipped (they are all gated on sriov_setup_pf_valid).
+
+- name: Reset per-PF result tracking
+  ansible.builtin.set_fact:
+    sriov_setup_pf_valid: true
+    sriov_setup_pf_error: null
+    sriov_setup_discovered_vfs: []
+
+- name: Validate required fields are present for this sriov_interfaces entry
+  ansible.builtin.set_fact:
+    sriov_setup_pf_valid: false
+    sriov_setup_pf_error: "entry is missing required field 'pf_name' and/or 'num_vfs'"
+  when: (sriov_setup_pf.pf_name is not defined) or (sriov_setup_pf.num_vfs is not defined)
+
+- name: Validate that the PF exists
+  ansible.builtin.include_tasks: validate_pf.yml
+  when: sriov_setup_pf_valid | bool
+
+- name: Check sriov_totalvfs against the requested num_vfs
+  ansible.builtin.include_tasks: check_totalvfs.yml
+  when: sriov_setup_pf_valid | bool
+
+- name: Set sriov_numvfs
+  ansible.builtin.include_tasks: set_numvfs.yml
+  when: sriov_setup_pf_valid | bool
+
+- name: Discover created VF PCI addresses and netdev names
+  ansible.builtin.include_tasks: discover_vfs.yml
+  when: sriov_setup_pf_valid | bool
+
+- name: Manage VF driver binding (autoload_driver / vf_driver)
+  ansible.builtin.include_tasks: bind_vf_drivers.yml
+  when:
+    - sriov_setup_pf_valid | bool
+    - sriov_setup_discovered_vfs | length > 0
+
+- name: Persist configuration via a generated systemd unit
+  ansible.builtin.include_tasks: persist_config.yml
+  when:
+    - sriov_setup_pf_valid | bool
+    - sriov_persist | bool
+
+- name: Fail fast on this PF's error, if configured
+  ansible.builtin.fail:
+    msg: "sriov_setup failed for PF '{{ sriov_setup_pf.pf_name | default('unknown') }}': {{ sriov_setup_pf_error }}"
+  when:
+    - not (sriov_setup_pf_valid | bool)
+    - sriov_setup_fail_fast | bool
+
+- name: Warn about this PF's error (fail-fast disabled)
+  ansible.builtin.debug:
+    msg: >-
+      Skipping PF '{{ sriov_setup_pf.pf_name | default('unknown') }}':
+      {{ sriov_setup_pf_error }}. Set sriov_setup_fail_fast: true to fail
+      the whole play on this kind of error instead of skipping.
+  when:
+    - not (sriov_setup_pf_valid | bool)
+    - not (sriov_setup_fail_fast | bool)
+
+- name: Record this PF's result in the aggregate summary
+  ansible.builtin.set_fact:
+    sriov_setup_all_results: "{{ sriov_setup_all_results + [sriov_setup_pf_result] }}"
+  vars:
+    sriov_setup_pf_result:
+      pf_name: "{{ sriov_setup_pf.pf_name | default('unknown') }}"
+      requested_num_vfs: "{{ sriov_setup_pf.num_vfs | default(omit) }}"
+      valid: "{{ sriov_setup_pf_valid }}"
+      error: "{{ sriov_setup_pf_error }}"
+      persisted: "{{ (sriov_persist | bool) and (sriov_setup_pf_valid | bool) }}"
+      vfs: "{{ sriov_setup_discovered_vfs }}"

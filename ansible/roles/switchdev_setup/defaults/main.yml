@@ -1,0 +1,128 @@
+---
+# defaults/main.yml for switchdev_setup
+#
+# ---------------------------------------------------------------------------
+# switchdev_devices: list of PFs to configure. Each entry is EITHER:
+#
+#   - a plain string: a PF interface name (e.g. "eth1") or a PCI address
+#     (e.g. "0000:03:00.0" or the short form "03:00.0"), or
+#
+#   - an object with:
+#       pf_name:      (optional) PF interface name
+#       pci_address:  (optional) PCI address -- at least one of pf_name /
+#                     pci_address must be given if using object form
+#       mode:         (optional) per-device override of switchdev_mode
+#       vendor:       (optional) key into switchdev_setup_vendor_hooks to
+#                     apply vendor-specific hooks for this device
+#
+# Example:
+#   switchdev_devices:
+#     - eth1
+#     - pci_address: "0000:03:00.1"
+#     - pf_name: ens3f0
+#       mode: switchdev
+#       vendor: nvidia_mellanox_bluefield
+# ---------------------------------------------------------------------------
+
+switchdev_devices: []
+
+# Global target eswitch mode, used for any device entry that does not
+# specify its own 'mode'. Must be 'switchdev' or 'legacy'.
+switchdev_mode: switchdev
+
+# If true, unbind every VF's driver on a PF before changing its eswitch
+# mode. Some drivers/firmware require this; others do not care. This role
+# does not assume either way for any vendor -- it is opt-in and explicit.
+# NOTE: unbound VFs are NOT automatically rebound by this role -- see
+# README.md "Known limitations".
+require_vfs_unbound: false
+
+# If true, fail the whole play immediately on any single device's error.
+# If false (default), skip that device with a warning and continue
+# processing the rest of switchdev_devices.
+switchdev_setup_fail_fast: false
+
+# ---------------------------------------------------------------------------
+# Vendor hooks
+#
+# This role does not itself branch on detected hardware vendor anywhere in
+# its task logic -- every device is handled through the same generic
+# devlink-based sequence. Vendor-specific quirks (extra devlink arguments,
+# commands that must run before/after the mode change, how long to wait
+# for representors to settle) are expressed here as data, selected per
+# device via the 'vendor' field (see switchdev_devices above), or globally
+# via switchdev_setup_default_vendor.
+#
+# The vendor entries below other than 'generic' are illustrative starting
+# points ONLY. They have not been validated against real hardware by this
+# project -- see docs/vendor-readiness/vendor-capability-matrix.md, which
+# rates 'switchdev support' as discovery-required or, at best, likely, for
+# every one of the four initial vendor tracks. Override or replace these
+# entries for your actual environment; do not treat them as confirmed
+# working configuration.
+# ---------------------------------------------------------------------------
+
+switchdev_setup_default_vendor: generic
+
+switchdev_setup_vendor_hooks:
+  generic:
+    pre_mode_change_commands: []
+    post_mode_change_commands: []
+    eswitch_set_extra_args: ""
+    representor_settle_seconds: 3
+
+  # Illustrative only -- unvalidated. NVIDIA/Mellanox devices commonly
+  # accept additional eswitch attributes (e.g. inline-mode, encap-mode);
+  # none are set here so the base 'switchdev' mode change stays minimal
+  # and portable. Add extra args explicitly once validated for your
+  # firmware/driver combination.
+  nvidia_mellanox_bluefield:
+    pre_mode_change_commands: []
+    post_mode_change_commands: []
+    eswitch_set_extra_args: ""
+    representor_settle_seconds: 5
+
+  # Illustrative only -- unvalidated. See
+  # docs/vendor-readiness/vendor-capability-matrix.md: switchdev support
+  # for AMD Pensando is rated discovery-required, not confirmed.
+  amd_pensando:
+    pre_mode_change_commands: []
+    post_mode_change_commands: []
+    eswitch_set_extra_args: ""
+    representor_settle_seconds: 5
+
+  # Illustrative only -- unvalidated. See
+  # docs/vendor-readiness/vendor-capability-matrix.md: switchdev support
+  # for Intel IPU is rated discovery-required, not confirmed.
+  intel_ipu:
+    pre_mode_change_commands: []
+    post_mode_change_commands: []
+    eswitch_set_extra_args: ""
+    representor_settle_seconds: 5
+
+  # Illustrative only -- unvalidated. See
+  # docs/vendor-readiness/vendor-capability-matrix.md: switchdev support
+  # for Marvell OCTEON is rated discovery-required, not confirmed.
+  marvell_octeon:
+    pre_mode_change_commands: []
+    post_mode_change_commands: []
+    eswitch_set_extra_args: ""
+    representor_settle_seconds: 5
+
+# ---------------------------------------------------------------------------
+# Facts output
+#
+# Results are written as an Ansible custom facts file (the
+# /etc/ansible/facts.d/*.fact convention), so a subsequent `setup` fact
+# gather exposes them as ansible_local.switchdev_setup to downstream roles
+# (e.g. ansible/roles/ovs_setup) without needing a separate lookup
+# mechanism.
+# ---------------------------------------------------------------------------
+
+switchdev_setup_facts_dir: /etc/ansible/facts.d
+switchdev_setup_facts_file_name: switchdev_setup.fact
+
+# If true, re-run a scoped `setup` fact gather (filtered to ansible_local)
+# immediately after writing the facts file, so ansible_local.switchdev_setup
+# is already visible to later tasks/roles within the same play run.
+switchdev_setup_refresh_local_facts: true

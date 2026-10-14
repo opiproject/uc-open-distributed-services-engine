@@ -1,0 +1,47 @@
+# Placeholder Helm values — SIMULATED DPU mode (CI / Kind).
+#
+# Used with ci/kind-simulated-dpu. Emulates the host vs DPU split without
+# SR-IOV, switchdev, or hardware offload. Safe to break; not for labs
+# with real cards.
+#
+# Chart keys are commented until Kind scripts pin a chart version.
+# Companion: ../README.md §5.
+#
+# chart:      <OVN_KUBERNETES_CHART>
+# version:    <OVN_KUBERNETES_CHART_VERSION>
+# profile:    simulated
+
+# ---------------------------------------------------------------------------
+# Topology under Kind (see ci/kind-simulated-dpu — scripts may still be stubs).
+# ---------------------------------------------------------------------------
+# kind:
+#   hostClusterName: <KIND_HOST_CLUSTER>
+#   dpuClusterName: <KIND_DPU_CLUSTER>
+#   # Alternative: one Kind cluster, two node roles. Prefer two clusters
+#   # so pairing bugs show up in CI the same way as hardware.
+
+# ---------------------------------------------------------------------------
+# Fake devices: veth or netdevsim pairs standing in for VF + representor.
+# ---------------------------------------------------------------------------
+# simulation:
+#   backend: netdevsim                    # netdevsim | veth | mock-sriov
+#   vfRepresentorPairs: <INTEGER>
+#   enableSriovDevicePlugin: false
+#   enableHwOffload: false                # MUST stay false in CI
+#   skipOffloadCheckerHardwareMarkers: true
+
+# dpu:
+#   mode: simulated
+#   # Pairing uses Kind node names, not PCI serials.
+#   pairByNodeName: true
+
+# ovs:
+#   datapathType: system
+#   hwOffload: false
+
+# Test hooks (not Helm upstream — ODSE CI only):
+# odse:
+#   runFunctionalSuite: tests/functional
+#   skip: [K8S-DPU-4, K8S-DPU-9, K8S-DPU-10]
+
+{}

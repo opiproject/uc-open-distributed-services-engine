@@ -1,0 +1,9 @@
+---
+# handlers/main.yml for host_base
+#
+# This role currently has no tasks that `notify` a handler -- all service
+# management is handled directly and conservatively in
+# tasks/service_libvirtd.yml and tasks/service_openvswitch.yml, since
+# service start/enable failures are reported rather than retried
+# automatically. This file is present for standard Ansible role structure
+# and as an extension point for downstream users composing this role.

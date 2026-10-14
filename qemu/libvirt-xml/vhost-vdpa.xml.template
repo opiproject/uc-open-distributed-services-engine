@@ -1,0 +1,65 @@
+<!--
+  ODSE lab template: KVM guest with virtio-net backed by vhost-vDPA.
+
+  Replace every @PLACEHOLDER@ before virsh define. Do not use example
+  paths or MACs on a real host.
+
+  Companion: qemu/vdpa/vhost-vdpa.md
+
+  Requires: vdpa device already created (vdpa dev add) and
+  @VHOST_VDPA_DEV@ present (typically /dev/vhost-vdpa-N).
+-->
+<domain type='kvm'>
+  <name>@VM_NAME@</name>
+  <memory unit='KiB'>@MEMORY_KIB@</memory>
+  <currentMemory unit='KiB'>@MEMORY_KIB@</currentMemory>
+  <vcpu placement='static'>@VCPU_COUNT@</vcpu>
+  <os>
+    <type arch='x86_64' machine='q35'>hvm</type>
+    <!-- aarch64/DPU-hosted guests: change arch/machine/firmware; keep type='vdpa'. -->
+    <boot dev='hd'/>
+  </os>
+  <features>
+    <acpi/>
+    <apic/>
+  </features>
+  <!-- migratable='on' is a CPU hint only; it does not test live migration. -->
+  <cpu mode='host-passthrough' check='none' migratable='on'/>
+  <clock offset='utc'/>
+  <on_poweroff>destroy</on_poweroff>
+  <on_reboot>restart</on_reboot>
+  <on_crash>destroy</on_crash>
+  <devices>
+    <emulator>/usr/bin/qemu-system-x86_64</emulator>
+    <disk type='file' device='disk'>
+      <driver name='qemu' type='qcow2'/>
+      <source file='@IMAGE_PATH@'/>
+      <target dev='vda' bus='virtio'/>
+    </disk>
+    <!-- Management NIC (optional). Keep this off the vDPA datapath under test. -->
+    <interface type='network'>
+      <source network='default'/>
+      <model type='virtio'/>
+    </interface>
+    <!--
+      vhost-vDPA virtio-net.
+      @VHOST_VDPA_DEV@ is the vhost-vdpa character device, e.g. /dev/vhost-vdpa-0
+      after `vdpa dev add name ... mgmtdev ...` (see vhost-vdpa.md §5).
+      This is not PCI VFIO hostdev.
+    -->
+    <interface type='vdpa'>
+      <source dev='@VHOST_VDPA_DEV@'/>
+      <mac address='@MAC@'/>
+      <model type='virtio'/>
+      <address type='pci' domain='0x0000' bus='0x07' slot='0x00' function='0x0'/>
+    </interface>
+    <serial type='pty'>
+      <target type='isa-serial' port='0'/>
+    </serial>
+    <console type='pty'>
+      <target type='serial' port='0'/>
+    </console>
+    <controller type='pci' index='0' model='pcie-root'/>
+    <memballoon model='virtio'/>
+  </devices>
+</domain>

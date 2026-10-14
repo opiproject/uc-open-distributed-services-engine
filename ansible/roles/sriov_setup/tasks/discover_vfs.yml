@@ -1,0 +1,52 @@
+---
+# tasks/discover_vfs.yml
+#
+# Enumerates the VF PCI addresses created for this PF (via the
+# .../device/virtfnN symlinks) and, where a netdev-creating driver has
+# already bound to a VF, its netdev name. The shell script emits JSON
+# directly so parsing on the Ansible side is a plain `from_json` rather
+# than fragile line-oriented text parsing.
+
+- name: Allow udev to settle after the sriov_numvfs change
+  ansible.builtin.command:
+    cmd: udevadm settle --timeout=5
+  changed_when: false
+  failed_when: false
+
+- name: List created VF PCI addresses and netdev names for this PF
+  ansible.builtin.shell:
+    cmd: |
+      set -e
+      pf_device="/sys/class/net/{{ sriov_setup_pf.pf_name }}/device"
+      entries=""
+      for l in "$pf_device"/virtfn*; do
+        [ -e "$l" ] || continue
+        idx="$(basename "$l" | sed 's/^virtfn//')"
+        pci="$(basename "$(readlink -f "$l")")"
+        netdev=""
+        netdir="/sys/bus/pci/devices/$pci/net"
+        if [ -d "$netdir" ]; then
+          netdev="$(ls "$netdir" 2>/dev/null | head -n1)"
+        fi
+        if [ -n "$entries" ]; then entries="$entries,"; fi
+        if [ -n "$netdev" ]; then
+          netdev_json="\"$netdev\""
+        else
+          netdev_json="null"
+        fi
+        entries="$entries{\"vf_index\": $idx, \"pci_address\": \"$pci\", \"netdev\": $netdev_json}"
+      done
+      echo "[$entries]"
+  register: sriov_setup_virtfn_listing
+  changed_when: false
+  failed_when: false
+
+- name: Parse discovered VF list
+  ansible.builtin.set_fact:
+    sriov_setup_discovered_vfs: "{{ (sriov_setup_virtfn_listing.stdout | default('[]') | trim) | from_json }}"
+
+- name: Report discovered VFs for this PF
+  ansible.builtin.debug:
+    msg: >-
+      '{{ sriov_setup_pf.pf_name }}': discovered {{ sriov_setup_discovered_vfs | length }}
+      VF(s): {{ sriov_setup_discovered_vfs }}

@@ -1,0 +1,110 @@
+<!--
+  ODSE VM-to-VM single-DPU lab: one KVM guest with one SR-IOV VF passed
+  through via VFIO. Used by `tools/labctl.py vm2vm create-vms`
+  (odse-lab-vm2vm/v1alpha1 config, one entry per `vms[]`).
+
+  This is a narrower, lab-specific sibling of
+  qemu/libvirt-xml/vf-passthrough.xml.template: same VFIO hostdev
+  pattern, but every placeholder maps 1:1 to a field labctl already has
+  from the vm2vm config + a discover-representors result, so labctl can
+  fill it in without inventing values.
+
+  Do NOT bake credentials, SSH private keys, or API tokens into the
+  disk image this domain boots (see qemu/images/README.md). This XML
+  file itself carries no secrets, only structural VM definition.
+
+  Placeholders (all replaced by labctl.py before `virsh define`):
+    @VM_NAME@           libvirt domain name (vms[].name)
+    @VM_UUID@           libvirt domain UUID (vms[].uuid, or a
+                        deterministic uuid5 derived from vms[].name so
+                        repeated `virsh define` calls for the same VM
+                        name are idempotent instead of colliding with
+                        an already-persisted domain under a freshly
+                        generated random UUID). See
+                        deterministic_domain_uuid() in
+                        plugins/base/vm_vfio.py.
+    @MEMORY_KIB@        memory in KiB (vms[].memory_mb * 1024)
+    @VCPUS@             vcpu count (vms[].vcpus)
+    @DISK_IMAGE_PATH@   guest qcow2 path (vms[].image)
+    @VF_PCI_ADDRESS@    VF PCI address, 0000:bb:dd.f form, for reference
+                        only (vms[].vf_pci, normally filled from a prior
+                        discover-representors result rather than typed
+                        by hand). The actual hostdev address below is
+                        split into domain/bus/slot/function
+    @VF_DOMAIN@ / @VF_BUS@ / @VF_SLOT@ / @VF_FUNCTION@
+                        hex fields of @VF_PCI_ADDRESS@, derived by labctl
+    @MAC_ADDRESS@       guest-visible MAC for the VF (vms[].mac, optional)
+
+  Companion: qemu/vfio/vf-passthrough.md (general VFIO background),
+  docs/operations/vm-image-preparation.md (what should be on the disk),
+  docs/operations/labctl-usage.md (how this template gets filled in).
+-->
+<domain type='kvm'>
+  <name>@VM_NAME@</name>
+  <uuid>@VM_UUID@</uuid>
+  <memory unit='KiB'>@MEMORY_KIB@</memory>
+  <currentMemory unit='KiB'>@MEMORY_KIB@</currentMemory>
+  <vcpu placement='static'>@VCPUS@</vcpu>
+  <os>
+    <type arch='x86_64' machine='q35'>hvm</type>
+    <!-- aarch64/DPU-hosted guests: change arch/machine/firmware; keep hostdev. -->
+    <boot dev='hd'/>
+  </os>
+  <features>
+    <acpi/>
+    <apic/>
+  </features>
+  <cpu mode='host-passthrough' check='none' migratable='off'/>
+  <clock offset='utc'/>
+  <on_poweroff>destroy</on_poweroff>
+  <on_reboot>restart</on_reboot>
+  <on_crash>destroy</on_crash>
+  <devices>
+    <emulator>/usr/bin/qemu-system-x86_64</emulator>
+    <disk type='file' device='disk'>
+      <driver name='qemu' type='qcow2'/>
+      <source file='@DISK_IMAGE_PATH@'/>
+      <target dev='vda' bus='virtio'/>
+    </disk>
+    <!--
+      Management NIC: a separate libvirt "default" NAT network, never the
+      VF under test. This is how labctl / the operator reaches the guest
+      over SSH (configure-vm-ips, run-traffic) without depending on the
+      forwarding path being correct yet.
+    -->
+    <interface type='network'>
+      <source network='default'/>
+      <model type='virtio'/>
+    </interface>
+    <!--
+      SR-IOV VF passthrough (VFIO). @VF_DOMAIN@ @VF_BUS@ @VF_SLOT@
+      @VF_FUNCTION@ come from splitting @VF_PCI_ADDRESS@, e.g.
+      0000:03:00.2 -> domain=0000 bus=03 slot=00 function=2.
+
+      managed='yes': libvirt binds vfio-pci around the guest lifecycle.
+      labctl omits this region when vf_pci is still unknown (attach-vfs
+      hotplugs it later).
+    -->
+    <!-- ODSE_VF_HOSTDEV_BEGIN -->
+    <interface type='hostdev' managed='yes'>
+      <source>
+        <address type='pci'
+                 domain='0x@VF_DOMAIN@'
+                 bus='0x@VF_BUS@'
+                 slot='0x@VF_SLOT@'
+                 function='0x@VF_FUNCTION@'/>
+      </source>
+      <mac address='@MAC_ADDRESS@'/>
+      <address type='pci' domain='0x0000' bus='0x07' slot='0x00' function='0x0'/>
+    </interface>
+    <!-- ODSE_VF_HOSTDEV_END -->
+    <serial type='pty'>
+      <target type='isa-serial' port='0'/>
+    </serial>
+    <console type='pty'>
+      <target type='serial' port='0'/>
+    </console>
+    <controller type='pci' index='0' model='pcie-root'/>
+    <memballoon model='virtio'/>
+  </devices>
+</domain>

@@ -1,0 +1,43 @@
+---
+# tasks/main.yml for sriov_setup
+#
+# Configures SR-IOV VFs for each PF listed in sriov_interfaces. See
+# README.md for the full variable schema and safety notes before running
+# this role -- changing sriov_numvfs can disrupt existing networking.
+
+- name: Ensure Ansible facts are available
+  ansible.builtin.setup:
+  when: ansible_facts.os_family is not defined
+
+- name: Validate that sriov_interfaces is defined and is a list
+  ansible.builtin.assert:
+    that:
+      - sriov_interfaces is defined
+      - sriov_interfaces is sequence
+    fail_msg: >-
+      sriov_interfaces must be defined as a list of objects, each with at
+      least 'pf_name' and 'num_vfs' -- see README.md for the expected
+      schema and examples.
+    success_msg: "sriov_interfaces is a valid list."
+
+- name: Nothing to do -- sriov_interfaces is empty
+  ansible.builtin.debug:
+    msg: "sriov_interfaces is empty; sriov_setup has nothing to configure."
+  when: sriov_interfaces | length == 0
+
+- name: Initialize aggregate result list
+  ansible.builtin.set_fact:
+    sriov_setup_all_results: []
+
+- name: Configure each requested SR-IOV interface
+  ansible.builtin.include_tasks: configure_pf.yml
+  loop: "{{ sriov_interfaces }}"
+  loop_control:
+    loop_var: sriov_setup_pf
+    label: "{{ sriov_setup_pf.pf_name | default('(missing pf_name)') }}"
+  when: sriov_interfaces | length > 0
+
+- name: Report created VF PCI addresses and netdev names per configured PF
+  ansible.builtin.debug:
+    msg: "{{ sriov_setup_all_results }}"
+  when: sriov_setup_all_results | default([]) | length > 0
